@@ -59,7 +59,7 @@ where occurred_on >= date_trunc('month', current_date)::date
 group by user_id;
 
 -- Mismo run-rate que monthly_projection (ver migración anterior), pero
--- por categoría en vez de un solo total -- para poder decir en qué
+-- por categoría en vez de un solo total, para poder decir en qué
 -- categoría se va a ir la plata, no solo cuánto en total.
 create view public.category_monthly_projection
 with (security_invoker = true) as
@@ -82,9 +82,9 @@ where t.occurred_on >= date_trunc('month', current_date)::date
 group by t.user_id, t.category_id, c.name;
 
 -- Promedio de gasto por categoría en meses YA CERRADOS (excluye el mes en
--- curso a propósito -- un mes a mitad de camino no es comparable con uno
+-- curso a propósito: un mes a mitad de camino no es comparable con uno
 -- completo). Sin historial previo, esta vista simplemente no devuelve filas
--- para ese usuario/categoría -- el cliente debe mostrar "sin historial
+-- para ese usuario/categoría: el cliente debe mostrar "sin historial
 -- todavía" en vez de tratar la ausencia de filas como cero.
 create view public.category_historical_average
 with (security_invoker = true) as

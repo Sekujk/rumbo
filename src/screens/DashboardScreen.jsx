@@ -20,7 +20,7 @@ export default function DashboardScreen() {
   const contentOpacity = useRef(new Animated.Value(0)).current;
   const progressAnim = useRef(new Animated.Value(0)).current;
 
-  // Entrada escalonada de las tarjetas de categoría -- con muchas
+  // Entrada escalonada de las tarjetas de categoría: con muchas
   // categorías activas, que aparezcan todas de golpe se siente pesado;
   // una detrás de otra guía el ojo mejor. Un Animated.Value por
   // categoría (creado una sola vez, como los chips de Agregar) y una
@@ -105,10 +105,10 @@ export default function DashboardScreen() {
   const daysInMonth = projection?.days_in_month ?? 30;
   const daysTracked = projection?.days_tracked ?? 0;
   // Con 1-2 días de datos reales, "gastado ÷ días × días del mes" es más
-  // ruido que señal -- se avisa en vez de mostrar el número como si fuera
+  // ruido que señal: se avisa en vez de mostrar el número como si fuera
   // confiable desde el primer registro.
   const lowConfidence = daysTracked > 0 && daysTracked < 3;
-  // El rango solo es informativo si tiene ancho real -- con pocos gastos
+  // El rango solo es informativo si tiene ancho real: con pocos gastos
   // la desviación estándar no se puede calcular y el rango colapsa al
   // mismo número que la proyección, no hace falta mostrarlo dos veces.
   const hasRange = projectedHigh - projectedLow > 1;
@@ -120,7 +120,7 @@ export default function DashboardScreen() {
     if (loading) return;
     Animated.timing(contentOpacity, { toValue: 1, duration: 320, useNativeDriver: true }).start();
     // El ancho de una barra no se puede animar con el driver nativo, así
-    // que esta va en el hilo de JS -- aceptable para una animación única.
+    // que esta va en el hilo de JS: aceptable para una animación única.
     Animated.timing(progressAnim, { toValue: progress, duration: 700, useNativeDriver: false }).start();
   }, [loading, progress]);
 

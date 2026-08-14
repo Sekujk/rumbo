@@ -17,7 +17,7 @@ export const useTheme = () => {
 
 export const ThemeProvider = ({ children }) => {
   const systemScheme = useColorScheme();
-  // 'system' | 'light' | 'dark' -- lo que el usuario eligió, no lo que se
+  // 'system' | 'light' | 'dark': lo que el usuario eligió, no lo que se
   // está mostrando (eso es resolvedScheme más abajo).
   const [mode, setMode] = useState('system');
   const [loaded, setLoaded] = useState(false);

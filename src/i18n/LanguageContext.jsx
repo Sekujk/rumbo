@@ -46,7 +46,7 @@ export const LanguageProvider = ({ children }) => {
     }
   };
 
-  // Interpolación simple {{param}} -- alcanza para el tamaño de esta app,
+  // Interpolación simple {{param}}: alcanza para el tamaño de esta app,
   // no hace falta una librería de i18n con pluralización automática (la
   // decisión singular/plural la toma quien llama a t(), eligiendo la
   // clave correcta).

@@ -33,13 +33,13 @@ function MainApp() {
   const { t } = useLanguage();
   const styles = useMemo(() => getStyles(colors), [colors]);
   const [activeTab, setActiveTab] = useState('dashboard');
-  // null = tabs normales, 'profile' = Perfil, 'faq' = FAQ (dentro de Perfil)
-  // -- una mini pila de navegación de 2 niveles, sin librería.
+  // null = tabs normales, 'profile' = Perfil, 'faq' = FAQ (dentro de Perfil):
+  // una mini pila de navegación de 2 niveles, sin librería.
   const [overlay, setOverlay] = useState(null);
   const [ready, setReady] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
-  // Entrada de toda la pantalla al terminar de loguearse -- antes pasaba
+  // Entrada de toda la pantalla al terminar de loguearse: antes pasaba
   // de golpe del login al dashboard sin transición.
   const mountOpacity = useRef(new Animated.Value(0)).current;
   const mountScale = useRef(new Animated.Value(0.98)).current;
@@ -48,8 +48,8 @@ function MainApp() {
   const contentTranslateX = useRef(new Animated.Value(0)).current;
   const headerOpacity = useRef(new Animated.Value(1)).current;
 
-  // Una escala animada por pestaña -- se crea una sola vez, no en cada
-  // render, para que el "rebote" al tocar no se reinicie de golpe.
+  // Una escala animada por pestaña (se crea una sola vez, no en cada
+  // render), para que el "rebote" al tocar no se reinicie de golpe.
   const tabScales = useRef(TABS.reduce((acc, tab) => {
     acc[tab.id] = new Animated.Value(1);
     return acc;
@@ -70,7 +70,7 @@ function MainApp() {
   }, [ready]);
 
   // La guía se muestra sola la primera vez que alguien entra (nunca vio
-  // la bandera en AsyncStorage) -- después, solo si la pide desde Perfil.
+  // la bandera en AsyncStorage); después, solo si la pide desde Perfil.
   useEffect(() => {
     if (!ready) return;
     AsyncStorage.getItem(ONBOARDING_KEY).then((seen) => {
@@ -91,7 +91,7 @@ function MainApp() {
   };
 
   // Mismo lenguaje de movimiento para cambiar de pestaña, abrir el perfil
-  // o volver de él -- una sola animación de "ventana que se desliza" con
+  // o volver de él: una sola animación de "ventana que se desliza" con
   // dirección, reusada en los tres casos.
   const animateTransition = (direction) => {
     contentOpacity.setValue(0);
@@ -108,7 +108,7 @@ function MainApp() {
     if (id === activeTab && !overlay) return;
     const oldIndex = TABS.findIndex((t) => t.id === activeTab);
     const newIndex = TABS.findIndex((t) => t.id === id);
-    // Positivo si vas hacia una pestaña más a la derecha -- el contenido
+    // Positivo si vas hacia una pestaña más a la derecha: el contenido
     // entra desde ese lado, como una ventana que se desliza, no solo un
     // fundido plano.
     const direction = overlay ? -1 : newIndex > oldIndex ? 1 : -1;

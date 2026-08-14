@@ -3,7 +3,7 @@
 // ramas condicionales por componente.
 
 // Paleta categórica: un color por categoría, asignado automático (ver
-// getCategoryColor más abajo) -- el usuario no elige nada, y así las
+// getCategoryColor más abajo): el usuario no elige nada, y así las
 // categorías se distinguen de un vistazo en vez de que todo sea
 // teal/gris. Separada de los colores semánticos (danger/warning/success)
 // para que un punto de categoría nunca se confunda con un estado.

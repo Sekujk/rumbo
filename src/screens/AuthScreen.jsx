@@ -20,7 +20,7 @@ export default function AuthScreen() {
   const slideAnim = useRef(new Animated.Value(16)).current;
   // Fundido corto cuando se alterna Ingresar/Registrarte, para que el
   // cambio de "ventana" (mismo formulario, otro propósito) se sienta,
-  // no salte de golpe. No corre en el primer render -- eso ya lo cubre
+  // no salte de golpe. No corre en el primer render: eso ya lo cubre
   // fadeAnim/slideAnim de arriba.
   const subtitleAnim = useRef(new Animated.Value(1)).current;
   const isFirstRender = useRef(true);

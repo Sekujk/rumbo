@@ -47,7 +47,7 @@ create policy "transactions_delete_own" on public.transactions
 
 -- Proyección "run-rate" del mes en curso: lo gastado hasta hoy, extrapolado
 -- a todo el mes. security_invoker hace que la vista respete el RLS de
--- transactions con el usuario que consulta, no con quien la creó -- así
+-- transactions con el usuario que consulta, no con quien la creó: así
 -- cada usuario solo ve su propia fila sin repetir el filtro acá.
 create view public.monthly_projection
 with (security_invoker = true) as

@@ -1,6 +1,6 @@
 // Diccionario es/en. Claves con namespace por pantalla para no chocar
 // nombres. Los placeholders van entre {{llaves}} y se reemplazan en
-// LanguageContext#t -- intencionalmente simple (solo substitución de
+// LanguageContext#t, intencionalmente simple (solo substitución de
 // texto), no hace falta una librería de i18n para el tamaño de esta app.
 // La gramática de singular/plural la decide quien llama a t() eligiendo
 // la clave correcta (ver ejemplos de uso con count === 1), no el motor.
