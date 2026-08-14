@@ -40,3 +40,8 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# herramientas de agentes/IA (config local, no forma parte de la app)
+.claude/
+CLAUDE.md
+AGENTS.md
