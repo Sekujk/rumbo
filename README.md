@@ -40,4 +40,4 @@ Solo se guarda lo que el usuario ingresa directamente (correo, gastos, ingresos,
 
 ## Versión
 
-Versión actual: `1.0.0`.
+Versión actual: [`1.0.0`](https://github.com/Sekujk/rumbo/releases/tag/v1.0.0). El `.apk` para instalar en Android está adjunto en esa misma página.
