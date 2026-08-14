@@ -10,6 +10,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.sekujk.rumbo",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -22,6 +23,12 @@
     },
     "plugins": [
       "expo-localization"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "52d12b0d-c492-41ea-978b-d1e12cdbd75b"
+      }
+    },
+    "owner": "sekujk"
   }
 }
