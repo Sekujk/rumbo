@@ -19,6 +19,7 @@ export default function ProfileScreen({ onOpenFAQ, onReplayGuide }) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const email = session?.user?.email || '';
   const memberSince = session?.user?.created_at
@@ -59,6 +60,40 @@ export default function ProfileScreen({ onOpenFAQ, onReplayGuide }) {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      t('profile.deleteAccountTitle'),
+      t('profile.deleteAccountMessage'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('profile.deleteAccount'),
+          style: 'destructive',
+          onPress: async () => {
+            setDeleting(true);
+            try {
+              const { error } = await supabase.rpc('delete_user');
+              if (error) throw error;
+            } catch (error) {
+              Alert.alert(t('common.error'), error.message || t('profile.deleteAccountErrorMessage'));
+              setDeleting(false);
+              return;
+            }
+            // La cuenta ya no existe en el servidor en este punto: se
+            // ignora cualquier error de signOut() al invalidar la
+            // sesión remota, porque el objetivo real (salir localmente)
+            // igual se cumple.
+            try {
+              await signOut();
+            } catch (error) {
+              // sin acción: ya se logró lo que importa
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -194,6 +229,26 @@ export default function ProfileScreen({ onOpenFAQ, onReplayGuide }) {
         <Ionicons name="log-out-outline" size={18} color={colors.danger} />
         <Text style={styles.signOutText}>{t('profile.signOut')}</Text>
       </TouchableOpacity>
+
+      <Text style={[styles.sectionTitle, styles.dangerTitle]}>{t('profile.dangerZone')}</Text>
+
+      <TouchableOpacity
+        style={styles.deleteAccountButton}
+        onPress={handleDeleteAccount}
+        disabled={deleting}
+        accessibilityRole="button"
+        accessibilityLabel={t('profile.deleteAccount')}
+        accessibilityState={{ disabled: deleting }}
+      >
+        {deleting ? (
+          <ActivityIndicator color={colors.danger} />
+        ) : (
+          <>
+            <Ionicons name="trash-outline" size={18} color={colors.danger} />
+            <Text style={styles.deleteAccountText}>{t('profile.deleteAccount')}</Text>
+          </>
+        )}
+      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -290,4 +345,18 @@ const getStyles = (colors) => StyleSheet.create({
     paddingHorizontal: 16,
   },
   signOutText: { color: colors.danger, fontSize: 15, fontWeight: '600' },
+  dangerTitle: { color: colors.danger, marginTop: 28 },
+  deleteAccountButton: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    minHeight: 52,
+    borderWidth: 1,
+    borderColor: colors.danger,
+    borderRadius: 8,
+    backgroundColor: colors.dangerSoft,
+  },
+  deleteAccountText: { color: colors.danger, fontSize: 15, fontWeight: '700' },
 });
