@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Animated } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import { LanguageProvider, useLanguage } from './src/i18n/LanguageContext';
@@ -14,6 +15,8 @@ import AddTransactionScreen from './src/screens/AddTransactionScreen';
 import HistoryScreen from './src/screens/HistoryScreen';
 import BudgetsScreen from './src/screens/BudgetsScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
+import FAQScreen from './src/screens/FAQScreen';
+import OnboardingScreen from './src/screens/OnboardingScreen';
 
 const TABS = [
   { id: 'dashboard', labelKey: 'tab.dashboard', icon: 'stats-chart', Component: DashboardScreen },
@@ -22,14 +25,19 @@ const TABS = [
   { id: 'budgets', labelKey: 'tab.budgets', icon: 'wallet', Component: BudgetsScreen },
 ];
 
+const ONBOARDING_KEY = 'rumbo:onboarding-seen';
+
 function MainApp() {
   const { session } = useAuth();
   const { colors } = useTheme();
   const { t } = useLanguage();
   const styles = useMemo(() => getStyles(colors), [colors]);
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [showProfile, setShowProfile] = useState(false);
+  // null = tabs normales, 'profile' = Perfil, 'faq' = FAQ (dentro de Perfil)
+  // -- una mini pila de navegación de 2 niveles, sin librería.
+  const [overlay, setOverlay] = useState(null);
   const [ready, setReady] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   // Entrada de toda la pantalla al terminar de loguearse -- antes pasaba
   // de golpe del login al dashboard sin transición.
@@ -61,6 +69,27 @@ function MainApp() {
     ]).start();
   }, [ready]);
 
+  // La guía se muestra sola la primera vez que alguien entra (nunca vio
+  // la bandera en AsyncStorage) -- después, solo si la pide desde Perfil.
+  useEffect(() => {
+    if (!ready) return;
+    AsyncStorage.getItem(ONBOARDING_KEY).then((seen) => {
+      if (!seen) setShowOnboarding(true);
+    });
+  }, [ready]);
+
+  const handleFinishOnboarding = () => {
+    setShowOnboarding(false);
+    AsyncStorage.setItem(ONBOARDING_KEY, 'true').catch((error) => {
+      console.error('No se pudo guardar que ya viste la guía:', error);
+    });
+  };
+
+  const handleReplayGuide = () => {
+    setOverlay(null);
+    setShowOnboarding(true);
+  };
+
   // Mismo lenguaje de movimiento para cambiar de pestaña, abrir el perfil
   // o volver de él -- una sola animación de "ventana que se desliza" con
   // dirección, reusada en los tres casos.
@@ -76,13 +105,13 @@ function MainApp() {
   };
 
   const handleTabPress = (id) => {
-    if (id === activeTab && !showProfile) return;
+    if (id === activeTab && !overlay) return;
     const oldIndex = TABS.findIndex((t) => t.id === activeTab);
     const newIndex = TABS.findIndex((t) => t.id === id);
     // Positivo si vas hacia una pestaña más a la derecha -- el contenido
     // entra desde ese lado, como una ventana que se desliza, no solo un
     // fundido plano.
-    const direction = showProfile ? -1 : newIndex > oldIndex ? 1 : -1;
+    const direction = overlay ? -1 : newIndex > oldIndex ? 1 : -1;
 
     Animated.sequence([
       Animated.timing(tabScales[id], { toValue: 0.85, duration: 80, useNativeDriver: true }),
@@ -91,17 +120,22 @@ function MainApp() {
 
     animateTransition(direction);
     setActiveTab(id);
-    setShowProfile(false);
+    setOverlay(null);
   };
 
   const handleOpenProfile = () => {
     animateTransition(1);
-    setShowProfile(true);
+    setOverlay('profile');
   };
 
-  const handleCloseProfile = () => {
+  const handleOpenFAQ = () => {
+    animateTransition(1);
+    setOverlay('faq');
+  };
+
+  const handleBack = () => {
     animateTransition(-1);
-    setShowProfile(false);
+    setOverlay(overlay === 'faq' ? 'profile' : null);
   };
 
   if (!ready) {
@@ -112,32 +146,33 @@ function MainApp() {
     );
   }
 
+  if (showOnboarding) {
+    return <OnboardingScreen onFinish={handleFinishOnboarding} />;
+  }
+
   const activeTabInfo = TABS.find((tab) => tab.id === activeTab);
   const ActiveComponent = activeTabInfo.Component;
+  const headerTitle = overlay === 'faq' ? t('faq.title') : overlay === 'profile' ? t('header.profile') : t(activeTabInfo.labelKey);
 
   return (
     <Animated.View style={[styles.flex, { opacity: mountOpacity, transform: [{ scale: mountScale }] }]}>
       <SafeAreaView style={styles.flex}>
         <View style={styles.header}>
-          {showProfile ? (
+          {overlay ? (
             <TouchableOpacity
-              onPress={handleCloseProfile}
+              onPress={handleBack}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               accessibilityRole="button"
               accessibilityLabel={t('header.back')}
               style={styles.backButton}
             >
               <Ionicons name="arrow-back" size={22} color={colors.text} />
-              <Animated.Text style={[styles.headerTitle, { opacity: headerOpacity }]}>
-                {t('header.profile')}
-              </Animated.Text>
+              <Animated.Text style={[styles.headerTitle, { opacity: headerOpacity }]}>{headerTitle}</Animated.Text>
             </TouchableOpacity>
           ) : (
-            <Animated.Text style={[styles.headerTitle, { opacity: headerOpacity }]}>
-              {t(activeTabInfo.labelKey)}
-            </Animated.Text>
+            <Animated.Text style={[styles.headerTitle, { opacity: headerOpacity }]}>{headerTitle}</Animated.Text>
           )}
-          {!showProfile && (
+          {!overlay && (
             <TouchableOpacity
               onPress={handleOpenProfile}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
@@ -152,7 +187,13 @@ function MainApp() {
         <Animated.View
           style={[styles.flex, { opacity: contentOpacity, transform: [{ translateX: contentTranslateX }] }]}
         >
-          {showProfile ? <ProfileScreen /> : <ActiveComponent />}
+          {overlay === 'faq' ? (
+            <FAQScreen />
+          ) : overlay === 'profile' ? (
+            <ProfileScreen onOpenFAQ={handleOpenFAQ} onReplayGuide={handleReplayGuide} />
+          ) : (
+            <ActiveComponent />
+          )}
         </Animated.View>
 
         <View style={styles.tabBar}>

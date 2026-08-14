@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, ActivityIndicator, ScrollView, RefreshControl, 
 import { supabase } from '../config/supabase';
 import { useTheme } from '../theme/ThemeContext';
 import { useLanguage } from '../i18n/LanguageContext';
+import { getCategoryColor } from '../theme/colors';
+import Mascot from '../components/Mascot';
 
 export default function DashboardScreen() {
   const { colors } = useTheme();
@@ -17,6 +19,19 @@ export default function DashboardScreen() {
 
   const contentOpacity = useRef(new Animated.Value(0)).current;
   const progressAnim = useRef(new Animated.Value(0)).current;
+
+  // Entrada escalonada de las tarjetas de categoría -- con muchas
+  // categorías activas, que aparezcan todas de golpe se siente pesado;
+  // una detrás de otra guía el ojo mejor. Un Animated.Value por
+  // categoría (creado una sola vez, como los chips de Agregar) y una
+  // bandera para que solo se anime la primera vez que cargan, no en
+  // cada pull-to-refresh.
+  const cardAnims = useRef({}).current;
+  const getCardAnim = (id) => {
+    if (!cardAnims[id]) cardAnims[id] = new Animated.Value(0);
+    return cardAnims[id];
+  };
+  const hasAnimatedCards = useRef(false);
 
   const load = useCallback(async () => {
     const [
@@ -109,6 +124,19 @@ export default function DashboardScreen() {
     Animated.timing(progressAnim, { toValue: progress, duration: 700, useNativeDriver: false }).start();
   }, [loading, progress]);
 
+  useEffect(() => {
+    if (loading || hasAnimatedCards.current) return;
+    const visibleRows = categoryRows.filter((r) => r.spent > 0 || r.budget != null);
+    if (visibleRows.length === 0) return;
+    hasAnimatedCards.current = true;
+    Animated.stagger(
+      55,
+      visibleRows.map((row) =>
+        Animated.timing(getCardAnim(row.categoryId), { toValue: 1, duration: 260, useNativeDriver: true })
+      )
+    ).start();
+  }, [loading, categoryRows]);
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -176,7 +204,10 @@ export default function DashboardScreen() {
         </View>
 
         {spent === 0 && (
-          <Text style={styles.empty}>{t('dashboard.emptyFirstExpense')}</Text>
+          <View style={styles.emptyState}>
+            <Mascot size={40} />
+            <Text style={styles.empty}>{t('dashboard.emptyFirstExpense')}</Text>
+          </View>
         )}
 
         <Text style={styles.sectionTitle}>{t('dashboard.incomeVsExpenses')}</Text>
@@ -217,10 +248,24 @@ export default function DashboardScreen() {
                   ? ((row.projected - row.historicalAvg) / row.historicalAvg) * 100
                   : null;
 
+              const cardAnim = getCardAnim(row.categoryId);
+
               return (
-                <View key={row.categoryId} style={styles.categoryCard}>
+                <Animated.View
+                  key={row.categoryId}
+                  style={[
+                    styles.categoryCard,
+                    {
+                      opacity: cardAnim,
+                      transform: [{ translateY: cardAnim.interpolate({ inputRange: [0, 1], outputRange: [14, 0] }) }],
+                    },
+                  ]}
+                >
                   <View style={styles.categoryCardHeader}>
-                    <Text style={styles.categoryCardName}>{row.name}</Text>
+                    <View style={styles.categoryCardNameRow}>
+                      <View style={[styles.categoryDot, { backgroundColor: getCategoryColor(colors, row.categoryId) }]} />
+                      <Text style={styles.categoryCardName}>{row.name}</Text>
+                    </View>
                     <Text style={styles.categoryCardSpent}>S/ {row.spent.toFixed(2)}</Text>
                   </View>
 
@@ -230,7 +275,7 @@ export default function DashboardScreen() {
                         <View
                           style={[
                             styles.categoryProgressFill,
-                            { width: `${budgetRatio * 100}%` },
+                            { width: `${budgetRatio * 100}%`, backgroundColor: getCategoryColor(colors, row.categoryId) },
                             overBudget && styles.categoryProgressFillOver,
                           ]}
                         />
@@ -275,7 +320,7 @@ export default function DashboardScreen() {
                   ) : (
                     <Text style={styles.categoryNoHistory}>{t('dashboard.noHistory')}</Text>
                   )}
-                </View>
+                </Animated.View>
               );
             })
         )}
@@ -305,6 +350,7 @@ const getStyles = (colors) => StyleSheet.create({
   projectionHint: { fontSize: 12, color: colors.textMuted, marginTop: 10, lineHeight: 17 },
   projectionHintWarning: { color: colors.warning, fontWeight: '600' },
   empty: { textAlign: 'center', color: colors.textMuted, marginTop: 16, fontSize: 13 },
+  emptyState: { alignItems: 'center', marginTop: 16, gap: 4 },
   sectionTitle: {
     fontSize: 13,
     fontWeight: '700',
@@ -332,22 +378,24 @@ const getStyles = (colors) => StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: 14,
+    padding: 18,
+    marginBottom: 14,
   },
   categoryCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  categoryCardNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  categoryDot: { width: 9, height: 9, borderRadius: 5 },
   categoryCardName: { fontSize: 15, fontWeight: '700', color: colors.text },
   categoryCardSpent: { fontSize: 15, fontWeight: '700', color: colors.text },
-  categoryProgressTrack: { height: 6, backgroundColor: colors.border, borderRadius: 3, marginTop: 10, overflow: 'hidden' },
+  categoryProgressTrack: { height: 6, backgroundColor: colors.border, borderRadius: 3, marginTop: 12, overflow: 'hidden' },
   categoryProgressFill: { height: '100%', backgroundColor: colors.primary },
   categoryProgressFillOver: { backgroundColor: colors.danger },
   categoryBudgetText: { fontSize: 12, color: colors.textMuted, marginTop: 6 },
   categoryBudgetTextOver: { color: colors.danger, fontWeight: '600' },
-  categoryProjection: { fontSize: 12, color: colors.textMuted, marginTop: 10 },
-  categoryOutlier: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
-  categoryVsAvg: { fontSize: 12, marginTop: 4, fontWeight: '600' },
+  categoryProjection: { fontSize: 12, color: colors.textMuted, marginTop: 12, lineHeight: 16 },
+  categoryOutlier: { fontSize: 11, color: colors.textMuted, marginTop: 3 },
+  categoryVsAvg: { fontSize: 12, marginTop: 6, fontWeight: '600', lineHeight: 16 },
   vsAvgUp: { color: colors.danger },
   vsAvgDown: { color: colors.success },
-  categoryNoHistory: { fontSize: 12, color: colors.textFaint, marginTop: 4, fontStyle: 'italic' },
+  categoryNoHistory: { fontSize: 12, color: colors.textFaint, marginTop: 6, fontStyle: 'italic' },
 });

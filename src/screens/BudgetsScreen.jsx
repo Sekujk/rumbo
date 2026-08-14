@@ -18,6 +18,20 @@ export default function BudgetsScreen() {
 
   const contentOpacity = useRef(new Animated.Value(0)).current;
 
+  // Rebote del check al guardar -- antes no había ninguna confirmación
+  // visual de que el presupuesto se guardó, más allá del spinner breve.
+  const saveAnims = useRef({}).current;
+  const getSaveAnim = (id) => {
+    if (!saveAnims[id]) saveAnims[id] = new Animated.Value(1);
+    return saveAnims[id];
+  };
+  const playSaveBounce = (id) => {
+    Animated.sequence([
+      Animated.timing(getSaveAnim(id), { toValue: 1.5, duration: 120, useNativeDriver: true }),
+      Animated.spring(getSaveAnim(id), { toValue: 1, useNativeDriver: true, friction: 3 }),
+    ]).start();
+  };
+
   const load = useCallback(async () => {
     const [{ data: categories, error: catError }, { data: budgets, error: budError }] = await Promise.all([
       supabase.from('categories').select('id, name').order('name'),
@@ -72,6 +86,7 @@ export default function BudgetsScreen() {
       );
       if (error) throw error;
       await load();
+      playSaveBounce(row.categoryId);
     } catch (error) {
       Alert.alert(t('common.error'), error.message || t('budgets.saveErrorMessage'));
     } finally {
@@ -130,7 +145,9 @@ export default function BudgetsScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={t('budgets.saveLabel', { name: item.name })}
               >
-                <Ionicons name="checkmark" size={20} color={colors.primary} />
+                <Animated.View style={{ transform: [{ scale: getSaveAnim(item.categoryId) }] }}>
+                  <Ionicons name="checkmark" size={20} color={colors.primary} />
+                </Animated.View>
               </TouchableOpacity>
               {item.budgetId && (
                 <TouchableOpacity
@@ -157,11 +174,11 @@ const getStyles = (colors) => StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
   intro: { fontSize: 13, color: colors.textMuted, lineHeight: 19, marginBottom: 20 },
   row: {
-    paddingVertical: 14,
+    paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  categoryName: { fontSize: 15, fontWeight: '600', color: colors.text, marginBottom: 8 },
+  categoryName: { fontSize: 15, fontWeight: '600', color: colors.text, marginBottom: 10 },
   rowRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   prefix: { fontSize: 15, color: colors.textMuted, fontWeight: '600' },
   input: {

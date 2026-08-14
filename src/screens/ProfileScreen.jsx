@@ -9,7 +9,7 @@ import { SUPPORTED_LANGUAGES } from '../i18n/translations';
 
 const THEME_MODES = ['system', 'light', 'dark'];
 
-export default function ProfileScreen() {
+export default function ProfileScreen({ onOpenFAQ, onReplayGuide }) {
   const { session, signOut } = useAuth();
   const { mode, setThemeMode, colors } = useTheme();
   const { lang, setLanguage, t } = useLanguage();
@@ -117,6 +117,30 @@ export default function ProfileScreen() {
         </View>
       </View>
 
+      <Text style={styles.sectionTitle}>{t('profile.help')}</Text>
+
+      <TouchableOpacity
+        style={styles.listRow}
+        onPress={onReplayGuide}
+        accessibilityRole="button"
+        accessibilityLabel={t('profile.replayGuide')}
+      >
+        <Ionicons name="sparkles-outline" size={20} color={colors.textMuted} />
+        <Text style={styles.listRowText}>{t('profile.replayGuide')}</Text>
+        <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.listRow}
+        onPress={onOpenFAQ}
+        accessibilityRole="button"
+        accessibilityLabel={t('profile.faqButton')}
+      >
+        <Ionicons name="help-circle-outline" size={20} color={colors.textMuted} />
+        <Text style={styles.listRowText}>{t('profile.faqButton')}</Text>
+        <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+      </TouchableOpacity>
+
       <Text style={styles.sectionTitle}>{t('profile.changePassword')}</Text>
 
       <View style={styles.passwordWrapper}>
@@ -198,6 +222,17 @@ const getStyles = (colors) => StyleSheet.create({
     marginTop: 36,
     marginBottom: 14,
   },
+  listRow: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    minHeight: 52,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  listRowText: { flex: 1, fontSize: 14, fontWeight: '600', color: colors.text },
   prefRow: { width: '100%', marginBottom: 18 },
   prefLabel: { fontSize: 13, color: colors.textMuted, fontWeight: '600', marginBottom: 8 },
   segmented: {

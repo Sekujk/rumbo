@@ -5,6 +5,8 @@ import { supabase } from '../config/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../theme/ThemeContext';
 import { useLanguage } from '../i18n/LanguageContext';
+import { getCategoryColor } from '../theme/colors';
+import Mascot from '../components/Mascot';
 
 export default function AddTransactionScreen() {
   const { session } = useAuth();
@@ -150,15 +152,20 @@ export default function AddTransactionScreen() {
               <View style={styles.categoryRow}>
                 {categories.map((cat) => {
                   const selected = categoryId === cat.id;
+                  const catColor = getCategoryColor(colors, cat.id);
                   return (
                     <Animated.View key={cat.id} style={{ transform: [{ scale: getChipScale(cat.id) }] }}>
                       <TouchableOpacity
-                        style={[styles.categoryChip, selected && styles.categoryChipActive]}
+                        style={[
+                          styles.categoryChip,
+                          selected ? { backgroundColor: catColor, borderColor: catColor } : null,
+                        ]}
                         onPress={() => handleSelectCategory(cat.id)}
                         accessibilityRole="radio"
                         accessibilityState={{ selected }}
                         accessibilityLabel={t('add.categoryLabel', { name: cat.name })}
                       >
+                        {!selected && <View style={[styles.chipDot, { backgroundColor: catColor }]} />}
                         <Text style={[styles.categoryChipText, selected && styles.categoryChipTextActive]}>
                           {cat.name}
                         </Text>
@@ -210,6 +217,7 @@ export default function AddTransactionScreen() {
           accessibilityLiveRegion="polite"
           accessibilityLabel={isIncome ? t('add.incomeSaved') : t('add.expenseSaved')}
         >
+          <Mascot size={20} animated={false} />
           <Ionicons name="checkmark-circle" size={22} color={colors.background} />
           <Text style={styles.successText}>{isIncome ? t('add.incomeSaved') : t('add.expenseSaved')}</Text>
         </Animated.View>
@@ -248,6 +256,9 @@ const getStyles = (colors) => StyleSheet.create({
   input: { borderWidth: 1, borderColor: colors.borderStrong, borderRadius: 8, padding: 12, fontSize: 16, minHeight: 48, color: colors.text, backgroundColor: colors.surface },
   categoryRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   categoryChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
     paddingVertical: 12,
     paddingHorizontal: 16,
     minHeight: 44,
@@ -256,7 +267,7 @@ const getStyles = (colors) => StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.borderStrong,
   },
-  categoryChipActive: { backgroundColor: colors.text, borderColor: colors.text },
+  chipDot: { width: 8, height: 8, borderRadius: 4 },
   categoryChipText: { color: colors.text, fontSize: 14 },
   categoryChipTextActive: { color: colors.background },
   button: { backgroundColor: colors.primary, borderRadius: 8, padding: 16, minHeight: 52, alignItems: 'center', justifyContent: 'center', marginTop: 32 },
