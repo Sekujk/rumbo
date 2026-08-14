@@ -1,23 +1,3 @@
--- La proyección "run-rate" trata cada sol gastado como si fuera parte de
--- un ritmo diario parejo. Eso rompe cuando un gasto puntual y grande
--- (la compra del mercado de la semana, por ejemplo) se mezcla con el
--- gasto normal del día a día: infla la proyección como si ese monto
--- se fuera a repetir todos los días.
---
--- Solución sin pedirle nada nuevo al usuario: mismo criterio de z-score
--- ya usado en code/ExplicadorEconomico, aplicado esta vez a los montos de
--- las transacciones del mes (por categoría, y también al total general).
--- Con 5+ transacciones en el alcance, cualquier monto que se aleje más de
--- 2 desviaciones estándar del promedio se trata como "puntual": se suma
--- una sola vez al proyectado, no se extrapola como si fuera diario. Con
--- menos de 5 transacciones, no hay suficiente base para calcular una
--- desviación estándar confiable, así que el comportamiento cae de vuelta
--- al run-rate simple de antes (ningún gasto se marca outlier).
---
--- De paso se expone un rango (projected_low/projected_high) usando esa
--- misma desviación estándar, escalada a los días que quedan del mes,
--- así la proyección deja de fingir una precisión que los datos no tienen.
-
 drop view if exists public.monthly_projection;
 drop view if exists public.category_monthly_projection;
 

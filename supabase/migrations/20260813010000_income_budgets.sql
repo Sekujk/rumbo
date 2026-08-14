@@ -1,7 +1,3 @@
--- Ingresos + presupuestos por categoría, para poder responder "gasté mucho
--- o poco" con datos reales del propio usuario en vez de un número general
--- sin punto de comparación.
-
 create table public.income (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -45,9 +41,6 @@ create policy "budgets_update_own" on public.budgets
 create policy "budgets_delete_own" on public.budgets
   for delete using (user_id = (select auth.uid()));
 
--- Ingreso total registrado en el mes en curso. No se proyecta (a diferencia
--- del gasto): el ingreso suele entrar de golpe (sueldo) en vez de a un
--- ritmo diario parejo, así que extrapolarlo daría un número engañoso.
 create view public.monthly_income
 with (security_invoker = true) as
 select
@@ -58,9 +51,6 @@ where occurred_on >= date_trunc('month', current_date)::date
   and occurred_on < (date_trunc('month', current_date) + interval '1 month')::date
 group by user_id;
 
--- Mismo run-rate que monthly_projection (ver migración anterior), pero
--- por categoría en vez de un solo total, para poder decir en qué
--- categoría se va a ir la plata, no solo cuánto en total.
 create view public.category_monthly_projection
 with (security_invoker = true) as
 select
@@ -81,11 +71,6 @@ where t.occurred_on >= date_trunc('month', current_date)::date
   and t.occurred_on < (date_trunc('month', current_date) + interval '1 month')::date
 group by t.user_id, t.category_id, c.name;
 
--- Promedio de gasto por categoría en meses YA CERRADOS (excluye el mes en
--- curso a propósito: un mes a mitad de camino no es comparable con uno
--- completo). Sin historial previo, esta vista simplemente no devuelve filas
--- para ese usuario/categoría: el cliente debe mostrar "sin historial
--- todavía" en vez de tratar la ausencia de filas como cero.
 create view public.category_historical_average
 with (security_invoker = true) as
 select

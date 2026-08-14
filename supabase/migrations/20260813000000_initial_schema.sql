@@ -1,7 +1,3 @@
--- Esquema inicial de Rumbo: gastos personales por usuario, con RLS por fila
--- desde el día uno (aunque fase 1 solo tenga un usuario real) para no
--- tener que rediseñar el modelo cuando se sume gente.
-
 create table public.categories (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -25,7 +21,6 @@ create index categories_user_idx on public.categories (user_id);
 alter table public.categories enable row level security;
 alter table public.transactions enable row level security;
 
--- categories: cada usuario solo ve/edita las suyas
 create policy "categories_select_own" on public.categories
   for select using (user_id = (select auth.uid()));
 create policy "categories_insert_own" on public.categories
@@ -35,7 +30,6 @@ create policy "categories_update_own" on public.categories
 create policy "categories_delete_own" on public.categories
   for delete using (user_id = (select auth.uid()));
 
--- transactions: mismo criterio
 create policy "transactions_select_own" on public.transactions
   for select using (user_id = (select auth.uid()));
 create policy "transactions_insert_own" on public.transactions
@@ -45,10 +39,6 @@ create policy "transactions_update_own" on public.transactions
 create policy "transactions_delete_own" on public.transactions
   for delete using (user_id = (select auth.uid()));
 
--- Proyección "run-rate" del mes en curso: lo gastado hasta hoy, extrapolado
--- a todo el mes. security_invoker hace que la vista respete el RLS de
--- transactions con el usuario que consulta, no con quien la creó: así
--- cada usuario solo ve su propia fila sin repetir el filtro acá.
 create view public.monthly_projection
 with (security_invoker = true) as
 select
