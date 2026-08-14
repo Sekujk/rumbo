@@ -3,7 +3,7 @@
 Rumbo es una app móvil de finanzas personales. Desde el primer gasto registrado, proyecta cuánto vas a terminar gastando el mes, y separa las compras puntuales del gasto recurrente para que esa proyección no se distorsione por una compra grande y poco común.
 
 > [!NOTE]
-> Rumbo es un proyecto privado de un solo desarrollador. Este README documenta la app para quien tenga acceso al código fuente, no como un lanzamiento de código abierto.
+> Rumbo es un proyecto personal de un solo desarrollador. El código se comparte como muestra de trabajo; no está pensado para que terceros lo desplieguen contra su propia infraestructura.
 
 ## Funcionalidades
 
@@ -24,41 +24,13 @@ Rumbo es una app móvil de finanzas personales. Desde el primer gasto registrado
 | Backend | Supabase (Postgres + Auth) |
 | Acceso a datos | Row Level Security (RLS): cada tabla restringe a cada usuario a sus propias filas |
 
-## Puesta en marcha
+## Versión
 
-### Requisitos previos
-
-- Node.js y npm
-- La app [Expo Go](https://expo.dev/go) en un dispositivo físico, o un simulador Android/iOS
-- Un proyecto de Supabase (ver [Base de datos](#base-de-datos) más abajo)
-
-### Instalación
-
-```bash
-npm install
-```
-
-Crea un archivo `.env` en la raíz del proyecto (no versionado) con las credenciales de tu proyecto de Supabase:
-
-```
-EXPO_PUBLIC_SUPABASE_URL=...
-EXPO_PUBLIC_SUPABASE_ANON_KEY=...
-```
-
-Estos valores están disponibles en el dashboard de Supabase, en **Project Settings → API**.
-
-### Ejecución
-
-```bash
-npm start    # abre Expo Dev Tools; escanea el QR con Expo Go
-npm run web   # alternativa: corre en el navegador
-```
+La versión actual es `1.0.0`. El historial de releases se publica en la [página de Releases](https://github.com/Sekujk/rumbo/releases) del repositorio a medida que se etiquetan versiones nuevas.
 
 ## Base de datos
 
-El esquema vive versionado en [`supabase/migrations/`](supabase/migrations/), aplicado en el orden del nombre de archivo. Para configurar un proyecto de Supabase nuevo, ejecuta el contenido de cada archivo `.sql` en el SQL Editor del dashboard, del más antiguo al más reciente.
-
-Algunos puntos relevantes del esquema:
+El esquema vive versionado en [`supabase/migrations/`](supabase/migrations/), aplicado en el orden del nombre de archivo. Algunos puntos relevantes del diseño:
 
 - Todas las tablas de usuario (`categories`, `transactions`, `income`, `budgets`) tienen políticas RLS que limitan cada fila a su propio dueño.
 - Las vistas de proyección (`monthly_projection` y su equivalente por categoría) se crean con `security_invoker = true`, por lo que respetan el RLS de quien las consulta, no el de su dueño.
