@@ -1,0 +1,353 @@
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { View, Text, StyleSheet, ActivityIndicator, ScrollView, RefreshControl, Animated } from 'react-native';
+import { supabase } from '../config/supabase';
+import { useTheme } from '../theme/ThemeContext';
+import { useLanguage } from '../i18n/LanguageContext';
+
+export default function DashboardScreen() {
+  const { colors } = useTheme();
+  const { t } = useLanguage();
+  const styles = useMemo(() => getStyles(colors), [colors]);
+
+  const [projection, setProjection] = useState(null);
+  const [income, setIncome] = useState(null);
+  const [categoryRows, setCategoryRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const contentOpacity = useRef(new Animated.Value(0)).current;
+  const progressAnim = useRef(new Animated.Value(0)).current;
+
+  const load = useCallback(async () => {
+    const [
+      { data: proj, error: projErr },
+      { data: inc, error: incErr },
+      { data: catProj, error: catProjErr },
+      { data: cats, error: catsErr },
+      { data: budgets, error: budgetsErr },
+      { data: histAvg, error: histErr },
+    ] = await Promise.all([
+      supabase.from('monthly_projection').select('*').maybeSingle(),
+      supabase.from('monthly_income').select('*').maybeSingle(),
+      supabase.from('category_monthly_projection').select('*'),
+      supabase.from('categories').select('id, name').order('name'),
+      supabase.from('budgets').select('category_id, monthly_limit'),
+      supabase.from('category_historical_average').select('*'),
+    ]);
+
+    if (!projErr) setProjection(proj);
+    if (!incErr) setIncome(inc);
+
+    if (!catsErr && !catProjErr && !budgetsErr && !histErr) {
+      const projMap = {};
+      (catProj || []).forEach((p) => { projMap[p.category_id] = p; });
+      const budgetMap = {};
+      (budgets || []).forEach((b) => { budgetMap[b.category_id] = Number(b.monthly_limit); });
+      const histMap = {};
+      (histAvg || []).forEach((h) => { histMap[h.category_id] = h; });
+
+      const rows = (cats || [])
+        .map((c) => {
+          const p = projMap[c.id];
+          const h = histMap[c.id];
+          return {
+            categoryId: c.id,
+            name: c.name,
+            spent: p ? Number(p.spent_so_far) : 0,
+            projected: p ? Number(p.projected_month_total) : 0,
+            projectedLow: p ? Number(p.projected_low) : 0,
+            projectedHigh: p ? Number(p.projected_high) : 0,
+            outlierCount: p ? Number(p.outlier_count) : 0,
+            outlierSpent: p ? Number(p.outlier_spent) : 0,
+            daysTracked: p ? Number(p.days_tracked) : 0,
+            budget: budgetMap[c.id] ?? null,
+            historicalAvg: h ? Number(h.avg_monthly_spent) : null,
+            monthsCounted: h ? h.months_counted : 0,
+          };
+        })
+        .sort((a, b) => b.spent - a.spent);
+      setCategoryRows(rows);
+    }
+  }, []);
+
+  useEffect(() => {
+    load().finally(() => setLoading(false));
+  }, [load]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  }, [load]);
+
+  const spent = projection?.spent_so_far ?? 0;
+  const projected = projection?.projected_month_total ?? 0;
+  const projectedLow = projection?.projected_low ?? projected;
+  const projectedHigh = projection?.projected_high ?? projected;
+  const outlierCount = projection?.outlier_count ?? 0;
+  const outlierSpent = projection?.outlier_spent ?? 0;
+  const daysElapsed = projection?.days_elapsed ?? new Date().getDate();
+  const daysInMonth = projection?.days_in_month ?? 30;
+  const daysTracked = projection?.days_tracked ?? 0;
+  // Con 1-2 días de datos reales, "gastado ÷ días × días del mes" es más
+  // ruido que señal -- se avisa en vez de mostrar el número como si fuera
+  // confiable desde el primer registro.
+  const lowConfidence = daysTracked > 0 && daysTracked < 3;
+  // El rango solo es informativo si tiene ancho real -- con pocos gastos
+  // la desviación estándar no se puede calcular y el rango colapsa al
+  // mismo número que la proyección, no hace falta mostrarlo dos veces.
+  const hasRange = projectedHigh - projectedLow > 1;
+  const progress = Math.min(daysElapsed / daysInMonth, 1);
+  const incomeSoFar = income?.income_so_far ?? 0;
+  const balance = incomeSoFar - spent;
+
+  useEffect(() => {
+    if (loading) return;
+    Animated.timing(contentOpacity, { toValue: 1, duration: 320, useNativeDriver: true }).start();
+    // El ancho de una barra no se puede animar con el driver nativo, así
+    // que esta va en el hilo de JS -- aceptable para una animación única.
+    Animated.timing(progressAnim, { toValue: progress, duration: 700, useNativeDriver: false }).start();
+  }, [loading, progress]);
+
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator color={colors.primary} accessibilityLabel={t('dashboard.loading')} />
+      </View>
+    );
+  }
+
+  const fillWidth = progressAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
+
+  return (
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={{ padding: 20 }}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+    >
+      <Animated.View style={{ opacity: contentOpacity }}>
+        <Text style={styles.eyebrow}>{t('dashboard.dayOfMonth', { day: daysElapsed, total: daysInMonth })}</Text>
+
+        <Text style={styles.spentLabel}>{t('dashboard.spentSoFar')}</Text>
+        <Text style={styles.spentValue} accessibilityLabel={t('dashboard.spentSoFarLabel', { amount: spent.toFixed(2) })}>
+          S/ {spent.toFixed(2)}
+        </Text>
+
+        <View
+          style={styles.progressTrack}
+          accessibilityRole="progressbar"
+          accessibilityLabel={t('dashboard.progressLabel', { day: daysElapsed, total: daysInMonth })}
+        >
+          <Animated.View style={[styles.progressFill, { width: fillWidth }]} />
+        </View>
+
+        <View style={styles.projectionCard}>
+          <Text style={styles.projectionLabel}>{t('dashboard.projectionLabel')}</Text>
+          <Text style={styles.projectionValue} accessibilityLabel={t('dashboard.projectionValueLabel', { amount: projected.toFixed(2) })}>
+            S/ {projected.toFixed(2)}
+          </Text>
+
+          {!lowConfidence && hasRange && (
+            <Text style={styles.projectionRange}>
+              {t('dashboard.projectionRange', { low: projectedLow.toFixed(2), high: projectedHigh.toFixed(2) })}
+            </Text>
+          )}
+
+          {outlierCount > 0 && (
+            <Text style={styles.projectionOutlier}>
+              {outlierCount === 1
+                ? t('dashboard.outlierOne', { amount: outlierSpent.toFixed(2) })
+                : t('dashboard.outlierMany', { count: outlierCount, amount: outlierSpent.toFixed(2) })}
+            </Text>
+          )}
+
+          {lowConfidence ? (
+            <Text style={[styles.projectionHint, styles.projectionHintWarning]}>
+              {daysTracked === 1
+                ? t('dashboard.lowConfidenceOne')
+                : t('dashboard.lowConfidenceMany', { days: daysTracked })}
+            </Text>
+          ) : (
+            <Text style={styles.projectionHint}>
+              {t('dashboard.hint')}
+              {hasRange ? t('dashboard.hintRange') : ''}
+            </Text>
+          )}
+        </View>
+
+        {spent === 0 && (
+          <Text style={styles.empty}>{t('dashboard.emptyFirstExpense')}</Text>
+        )}
+
+        <Text style={styles.sectionTitle}>{t('dashboard.incomeVsExpenses')}</Text>
+        {incomeSoFar > 0 ? (
+          <View style={styles.balanceCard}>
+            <View style={styles.balanceRow}>
+              <Text style={styles.balanceLabel}>{t('dashboard.incomeThisMonth')}</Text>
+              <Text style={styles.balanceValue}>S/ {incomeSoFar.toFixed(2)}</Text>
+            </View>
+            <View style={styles.balanceRow}>
+              <Text style={styles.balanceLabel}>{t('dashboard.spent')}</Text>
+              <Text style={styles.balanceValue}>S/ {spent.toFixed(2)}</Text>
+            </View>
+            <View style={[styles.balanceRow, styles.balanceRowTotal]}>
+              <Text style={styles.balanceLabelTotal}>{t('dashboard.remaining')}</Text>
+              <Text style={[styles.balanceValueTotal, balance < 0 && styles.balanceNegative]}>
+                S/ {balance.toFixed(2)}
+              </Text>
+            </View>
+          </View>
+        ) : (
+          <Text style={styles.empty}>{t('dashboard.emptyIncome')}</Text>
+        )}
+
+        <Text style={styles.sectionTitle}>{t('dashboard.byCategory')}</Text>
+        {categoryRows.filter((r) => r.spent > 0 || r.budget != null).length === 0 ? (
+          <Text style={styles.empty}>{t('dashboard.emptyCategories')}</Text>
+        ) : (
+          categoryRows
+            .filter((r) => r.spent > 0 || r.budget != null)
+            .map((row) => {
+              const budgetRatio = row.budget ? Math.min(row.spent / row.budget, 1) : null;
+              const overBudget = row.budget != null && row.spent > row.budget;
+              const rowLowConfidence = row.daysTracked > 0 && row.daysTracked < 3;
+              const rowHasRange = !rowLowConfidence && row.projectedHigh - row.projectedLow > 1;
+              const vsAvg =
+                row.historicalAvg && row.historicalAvg > 0
+                  ? ((row.projected - row.historicalAvg) / row.historicalAvg) * 100
+                  : null;
+
+              return (
+                <View key={row.categoryId} style={styles.categoryCard}>
+                  <View style={styles.categoryCardHeader}>
+                    <Text style={styles.categoryCardName}>{row.name}</Text>
+                    <Text style={styles.categoryCardSpent}>S/ {row.spent.toFixed(2)}</Text>
+                  </View>
+
+                  {row.budget != null && (
+                    <>
+                      <View style={styles.categoryProgressTrack}>
+                        <View
+                          style={[
+                            styles.categoryProgressFill,
+                            { width: `${budgetRatio * 100}%` },
+                            overBudget && styles.categoryProgressFillOver,
+                          ]}
+                        />
+                      </View>
+                      <Text style={[styles.categoryBudgetText, overBudget && styles.categoryBudgetTextOver]}>
+                        {overBudget
+                          ? t('dashboard.overBudget', { over: (row.spent - row.budget).toFixed(2), budget: row.budget.toFixed(2) })
+                          : t('dashboard.underBudget', { left: (row.budget - row.spent).toFixed(2), budget: row.budget.toFixed(2) })}
+                      </Text>
+                    </>
+                  )}
+
+                  <Text style={styles.categoryProjection}>
+                    {t('dashboard.projected', { amount: row.projected.toFixed(2) })}
+                    {rowLowConfidence
+                      ? (row.daysTracked === 1
+                        ? t('dashboard.projectedLowConfidenceOne')
+                        : t('dashboard.projectedLowConfidenceMany', { days: row.daysTracked }))
+                      : rowHasRange
+                      ? t('dashboard.projectedRange', { low: row.projectedLow.toFixed(2), high: row.projectedHigh.toFixed(2) })
+                      : ''}
+                  </Text>
+
+                  {row.outlierCount > 0 && (
+                    <Text style={styles.categoryOutlier}>
+                      {row.outlierCount === 1
+                        ? t('dashboard.categoryOutlierOne', { amount: row.outlierSpent.toFixed(2) })
+                        : t('dashboard.categoryOutlierMany', { count: row.outlierCount, amount: row.outlierSpent.toFixed(2) })}
+                    </Text>
+                  )}
+
+                  {vsAvg != null ? (
+                    <Text style={[styles.categoryVsAvg, vsAvg > 0 ? styles.vsAvgUp : styles.vsAvgDown]}>
+                      {vsAvg > 0
+                        ? (row.monthsCounted === 1
+                          ? t('dashboard.vsAvgUpOne', { percent: Math.abs(vsAvg).toFixed(0), avg: row.historicalAvg.toFixed(2) })
+                          : t('dashboard.vsAvgUpMany', { percent: Math.abs(vsAvg).toFixed(0), avg: row.historicalAvg.toFixed(2), months: row.monthsCounted }))
+                        : (row.monthsCounted === 1
+                          ? t('dashboard.vsAvgDownOne', { percent: Math.abs(vsAvg).toFixed(0), avg: row.historicalAvg.toFixed(2) })
+                          : t('dashboard.vsAvgDownMany', { percent: Math.abs(vsAvg).toFixed(0), avg: row.historicalAvg.toFixed(2), months: row.monthsCounted }))}
+                    </Text>
+                  ) : (
+                    <Text style={styles.categoryNoHistory}>{t('dashboard.noHistory')}</Text>
+                  )}
+                </View>
+              );
+            })
+        )}
+      </Animated.View>
+    </ScrollView>
+  );
+}
+
+const getStyles = (colors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
+  eyebrow: { fontSize: 12, color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 16 },
+  spentLabel: { fontSize: 14, color: colors.textMuted },
+  spentValue: { fontSize: 40, fontWeight: '700', color: colors.text, marginTop: 4 },
+  progressTrack: { height: 6, backgroundColor: colors.border, borderRadius: 3, marginTop: 16, overflow: 'hidden' },
+  progressFill: { height: '100%', backgroundColor: colors.primary },
+  projectionCard: {
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: 12,
+    padding: 20,
+    marginTop: 28,
+  },
+  projectionLabel: { fontSize: 13, color: colors.textMuted, fontWeight: '600' },
+  projectionValue: { fontSize: 32, fontWeight: '700', color: colors.primary, marginTop: 6 },
+  projectionRange: { fontSize: 13, color: colors.primary, fontWeight: '600', marginTop: 6 },
+  projectionOutlier: { fontSize: 12, color: colors.textMuted, marginTop: 8, lineHeight: 17 },
+  projectionHint: { fontSize: 12, color: colors.textMuted, marginTop: 10, lineHeight: 17 },
+  projectionHintWarning: { color: colors.warning, fontWeight: '600' },
+  empty: { textAlign: 'center', color: colors.textMuted, marginTop: 16, fontSize: 13 },
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.text,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    marginTop: 36,
+    marginBottom: 14,
+  },
+  balanceCard: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 16,
+  },
+  balanceRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 },
+  balanceLabel: { fontSize: 14, color: colors.textMuted },
+  balanceValue: { fontSize: 14, color: colors.text, fontWeight: '600' },
+  balanceRowTotal: { marginTop: 6, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border },
+  balanceLabelTotal: { fontSize: 15, color: colors.text, fontWeight: '700' },
+  balanceValueTotal: { fontSize: 18, color: colors.success, fontWeight: '700' },
+  balanceNegative: { color: colors.danger },
+  categoryCard: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+  },
+  categoryCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  categoryCardName: { fontSize: 15, fontWeight: '700', color: colors.text },
+  categoryCardSpent: { fontSize: 15, fontWeight: '700', color: colors.text },
+  categoryProgressTrack: { height: 6, backgroundColor: colors.border, borderRadius: 3, marginTop: 10, overflow: 'hidden' },
+  categoryProgressFill: { height: '100%', backgroundColor: colors.primary },
+  categoryProgressFillOver: { backgroundColor: colors.danger },
+  categoryBudgetText: { fontSize: 12, color: colors.textMuted, marginTop: 6 },
+  categoryBudgetTextOver: { color: colors.danger, fontWeight: '600' },
+  categoryProjection: { fontSize: 12, color: colors.textMuted, marginTop: 10 },
+  categoryOutlier: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
+  categoryVsAvg: { fontSize: 12, marginTop: 4, fontWeight: '600' },
+  vsAvgUp: { color: colors.danger },
+  vsAvgDown: { color: colors.success },
+  categoryNoHistory: { fontSize: 12, color: colors.textFaint, marginTop: 4, fontStyle: 'italic' },
+});
