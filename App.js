@@ -15,8 +15,24 @@ import AddTransactionScreen from './src/screens/AddTransactionScreen';
 import HistoryScreen from './src/screens/HistoryScreen';
 import BudgetsScreen from './src/screens/BudgetsScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
+import EditProfileScreen from './src/screens/EditProfileScreen';
+import SettingsScreen from './src/screens/SettingsScreen';
+import UpdateScreen from './src/screens/UpdateScreen';
+import AboutScreen from './src/screens/AboutScreen';
 import FAQScreen from './src/screens/FAQScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
+
+// Pantallas que se abren desde Perfil: "Volver" desde cualquiera de
+// estas lleva de regreso a Perfil, no a las tabs.
+const PROFILE_CHILDREN = ['faq', 'editProfile', 'settings', 'update', 'about'];
+const OVERLAY_TITLE_KEYS = {
+  profile: 'header.profile',
+  faq: 'faq.title',
+  editProfile: 'profile.editProfile',
+  settings: 'profile.settings',
+  update: 'profile.update',
+  about: 'profile.about',
+};
 
 const TABS = [
   { id: 'dashboard', labelKey: 'tab.dashboard', icon: 'stats-chart', Component: DashboardScreen },
@@ -33,8 +49,9 @@ function MainApp() {
   const { t } = useLanguage();
   const styles = useMemo(() => getStyles(colors), [colors]);
   const [activeTab, setActiveTab] = useState('dashboard');
-  // null = tabs normales, 'profile' = Perfil, 'faq' = FAQ (dentro de Perfil):
-  // una mini pila de navegación de 2 niveles, sin librería.
+  // null = tabs normales, 'profile' = Perfil, o una de PROFILE_CHILDREN
+  // (abierta desde dentro de Perfil): una mini pila de navegación de 2
+  // niveles, sin librería.
   const [overlay, setOverlay] = useState(null);
   const [ready, setReady] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -128,14 +145,14 @@ function MainApp() {
     setOverlay('profile');
   };
 
-  const handleOpenFAQ = () => {
+  const handleNavigateFromProfile = (key) => {
     animateTransition(1);
-    setOverlay('faq');
+    setOverlay(key);
   };
 
   const handleBack = () => {
     animateTransition(-1);
-    setOverlay(overlay === 'faq' ? 'profile' : null);
+    setOverlay(PROFILE_CHILDREN.includes(overlay) ? 'profile' : null);
   };
 
   if (!ready) {
@@ -152,7 +169,7 @@ function MainApp() {
 
   const activeTabInfo = TABS.find((tab) => tab.id === activeTab);
   const ActiveComponent = activeTabInfo.Component;
-  const headerTitle = overlay === 'faq' ? t('faq.title') : overlay === 'profile' ? t('header.profile') : t(activeTabInfo.labelKey);
+  const headerTitle = overlay ? t(OVERLAY_TITLE_KEYS[overlay]) : t(activeTabInfo.labelKey);
 
   return (
     <Animated.View style={[styles.flex, { opacity: mountOpacity, transform: [{ scale: mountScale }] }]}>
@@ -190,7 +207,15 @@ function MainApp() {
           {overlay === 'faq' ? (
             <FAQScreen />
           ) : overlay === 'profile' ? (
-            <ProfileScreen onOpenFAQ={handleOpenFAQ} onReplayGuide={handleReplayGuide} />
+            <ProfileScreen onNavigate={handleNavigateFromProfile} />
+          ) : overlay === 'editProfile' ? (
+            <EditProfileScreen />
+          ) : overlay === 'settings' ? (
+            <SettingsScreen />
+          ) : overlay === 'update' ? (
+            <UpdateScreen />
+          ) : overlay === 'about' ? (
+            <AboutScreen onReplayGuide={handleReplayGuide} />
           ) : (
             <ActiveComponent />
           )}
