@@ -6,20 +6,32 @@ import { useLanguage } from '../i18n/LanguageContext';
 import { getCategoryColor } from '../theme/colors';
 import { getCategoryDisplayName } from '../config/defaultCategories';
 import Mascot from '../components/Mascot';
+import MonthSelector from '../components/MonthSelector';
 
 export default function DashboardScreen() {
   const { colors } = useTheme();
   const { t } = useLanguage();
   const styles = useMemo(() => getStyles(colors), [colors]);
 
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const d = new Date();
+    d.setDate(1);
+    return d;
+  });
   const [projection, setProjection] = useState(null);
   const [income, setIncome] = useState(null);
   const [categoryRows, setCategoryRows] = useState([]);
+  const [pastTotals, setPastTotals] = useState({ spent: 0, income: 0 });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const contentOpacity = useRef(new Animated.Value(0)).current;
   const progressAnim = useRef(new Animated.Value(0)).current;
+
+  const isCurrentMonth = useMemo(() => {
+    const today = new Date();
+    return selectedMonth.getFullYear() === today.getFullYear() && selectedMonth.getMonth() === today.getMonth();
+  }, [selectedMonth]);
 
   // Entrada escalonada de las tarjetas de categoría: con muchas
   // categorías activas, que aparezcan todas de golpe se siente pesado;
@@ -34,7 +46,11 @@ export default function DashboardScreen() {
   };
   const hasAnimatedCards = useRef(false);
 
-  const load = useCallback(async () => {
+  // El mes en curso usa las vistas de proyección (run-rate, rango,
+  // outliers). Un mes ya cerrado no tiene nada que proyectar: se trae
+  // directo de transactions/income y se suma tal cual, sin el
+  // aparataje de proyección.
+  const loadCurrentMonth = useCallback(async () => {
     const [
       { data: proj, error: projErr },
       { data: inc, error: incErr },
@@ -86,7 +102,51 @@ export default function DashboardScreen() {
     }
   }, [t]);
 
+  const loadPastMonth = useCallback(async () => {
+    const monthStartStr = selectedMonth.toISOString().slice(0, 10);
+    const nextMonth = new Date(selectedMonth);
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    const nextMonthStr = nextMonth.toISOString().slice(0, 10);
+
+    const [
+      { data: txs, error: txErr },
+      { data: incomeRows, error: incErr },
+      { data: cats, error: catsErr },
+    ] = await Promise.all([
+      supabase.from('transactions').select('amount, category_id').gte('occurred_on', monthStartStr).lt('occurred_on', nextMonthStr),
+      supabase.from('income').select('amount').gte('occurred_on', monthStartStr).lt('occurred_on', nextMonthStr),
+      supabase.from('categories').select('id, name, default_key').order('name'),
+    ]);
+
+    if (!txErr && !incErr && !catsErr) {
+      const totalSpent = (txs || []).reduce((sum, tx) => sum + Number(tx.amount), 0);
+      const totalIncome = (incomeRows || []).reduce((sum, r) => sum + Number(r.amount), 0);
+      setPastTotals({ spent: totalSpent, income: totalIncome });
+
+      const spentByCategory = {};
+      (txs || []).forEach((tx) => {
+        if (!tx.category_id) return;
+        spentByCategory[tx.category_id] = (spentByCategory[tx.category_id] || 0) + Number(tx.amount);
+      });
+      const rows = (cats || [])
+        .filter((c) => spentByCategory[c.id] > 0)
+        .map((c) => ({ categoryId: c.id, name: getCategoryDisplayName(t, c), spent: spentByCategory[c.id] }))
+        .sort((a, b) => b.spent - a.spent);
+      setCategoryRows(rows);
+    }
+  }, [selectedMonth, t]);
+
+  const load = useCallback(async () => {
+    if (isCurrentMonth) {
+      await loadCurrentMonth();
+    } else {
+      await loadPastMonth();
+    }
+  }, [isCurrentMonth, loadCurrentMonth, loadPastMonth]);
+
   useEffect(() => {
+    setLoading(true);
+    hasAnimatedCards.current = false;
     load().finally(() => setLoading(false));
   }, [load]);
 
@@ -117,17 +177,25 @@ export default function DashboardScreen() {
   const incomeSoFar = income?.income_so_far ?? 0;
   const balance = incomeSoFar - spent;
 
+  // Valores unificados que usa la seccion "Ingresos vs. gastos", igual
+  // para mes actual (parcial) o mes pasado (cerrado, ya no cambia).
+  const displaySpent = isCurrentMonth ? spent : pastTotals.spent;
+  const displayIncome = isCurrentMonth ? incomeSoFar : pastTotals.income;
+  const displayBalance = displayIncome - displaySpent;
+
   useEffect(() => {
     if (loading) return;
     Animated.timing(contentOpacity, { toValue: 1, duration: 320, useNativeDriver: true }).start();
-    // El ancho de una barra no se puede animar con el driver nativo, así
-    // que esta va en el hilo de JS: aceptable para una animación única.
-    Animated.timing(progressAnim, { toValue: progress, duration: 700, useNativeDriver: false }).start();
-  }, [loading, progress]);
+    if (isCurrentMonth) {
+      // El ancho de una barra no se puede animar con el driver nativo, así
+      // que esta va en el hilo de JS: aceptable para una animación única.
+      Animated.timing(progressAnim, { toValue: progress, duration: 700, useNativeDriver: false }).start();
+    }
+  }, [loading, progress, isCurrentMonth]);
 
   useEffect(() => {
     if (loading || hasAnimatedCards.current) return;
-    const visibleRows = categoryRows.filter((r) => r.spent > 0 || r.budget != null);
+    const visibleRows = isCurrentMonth ? categoryRows.filter((r) => r.spent > 0 || r.budget != null) : categoryRows;
     if (visibleRows.length === 0) return;
     hasAnimatedCards.current = true;
     Animated.stagger(
@@ -136,7 +204,7 @@ export default function DashboardScreen() {
         Animated.timing(getCardAnim(row.categoryId), { toValue: 1, duration: 260, useNativeDriver: true })
       )
     ).start();
-  }, [loading, categoryRows]);
+  }, [loading, categoryRows, isCurrentMonth]);
 
   if (loading) {
     return (
@@ -147,6 +215,7 @@ export default function DashboardScreen() {
   }
 
   const fillWidth = progressAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
+  const visibleCategoryRows = isCurrentMonth ? categoryRows.filter((r) => r.spent > 0 || r.budget != null) : categoryRows;
 
   return (
     <ScrollView
@@ -155,77 +224,97 @@ export default function DashboardScreen() {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
     >
       <Animated.View style={{ opacity: contentOpacity }}>
-        <Text style={styles.eyebrow}>{t('dashboard.dayOfMonth', { day: daysElapsed, total: daysInMonth })}</Text>
+        <MonthSelector month={selectedMonth} onChange={setSelectedMonth} />
 
-        <Text style={styles.spentLabel}>{t('dashboard.spentSoFar')}</Text>
-        <Text style={styles.spentValue} accessibilityLabel={t('dashboard.spentSoFarLabel', { amount: spent.toFixed(2) })}>
-          S/ {spent.toFixed(2)}
-        </Text>
+        {isCurrentMonth ? (
+          <>
+            <Text style={styles.eyebrow}>{t('dashboard.dayOfMonth', { day: daysElapsed, total: daysInMonth })}</Text>
 
-        <View
-          style={styles.progressTrack}
-          accessibilityRole="progressbar"
-          accessibilityLabel={t('dashboard.progressLabel', { day: daysElapsed, total: daysInMonth })}
-        >
-          <Animated.View style={[styles.progressFill, { width: fillWidth }]} />
-        </View>
-
-        <View style={styles.projectionCard}>
-          <Text style={styles.projectionLabel}>{t('dashboard.projectionLabel')}</Text>
-          <Text style={styles.projectionValue} accessibilityLabel={t('dashboard.projectionValueLabel', { amount: projected.toFixed(2) })}>
-            S/ {projected.toFixed(2)}
-          </Text>
-
-          {!lowConfidence && hasRange && (
-            <Text style={styles.projectionRange}>
-              {t('dashboard.projectionRange', { low: projectedLow.toFixed(2), high: projectedHigh.toFixed(2) })}
+            <Text style={styles.spentLabel}>{t('dashboard.spentSoFar')}</Text>
+            <Text style={styles.spentValue} accessibilityLabel={t('dashboard.spentSoFarLabel', { amount: spent.toFixed(2) })}>
+              S/ {spent.toFixed(2)}
             </Text>
-          )}
 
-          {outlierCount > 0 && (
-            <Text style={styles.projectionOutlier}>
-              {outlierCount === 1
-                ? t('dashboard.outlierOne', { amount: outlierSpent.toFixed(2) })
-                : t('dashboard.outlierMany', { count: outlierCount, amount: outlierSpent.toFixed(2) })}
-            </Text>
-          )}
+            <View
+              style={styles.progressTrack}
+              accessibilityRole="progressbar"
+              accessibilityLabel={t('dashboard.progressLabel', { day: daysElapsed, total: daysInMonth })}
+            >
+              <Animated.View style={[styles.progressFill, { width: fillWidth }]} />
+            </View>
 
-          {lowConfidence ? (
-            <Text style={[styles.projectionHint, styles.projectionHintWarning]}>
-              {daysTracked === 1
-                ? t('dashboard.lowConfidenceOne')
-                : t('dashboard.lowConfidenceMany', { days: daysTracked })}
-            </Text>
-          ) : (
-            <Text style={styles.projectionHint}>
-              {t('dashboard.hint')}
-              {hasRange ? t('dashboard.hintRange') : ''}
-            </Text>
-          )}
-        </View>
+            <View style={styles.projectionCard}>
+              <Text style={styles.projectionLabel}>{t('dashboard.projectionLabel')}</Text>
+              <Text style={styles.projectionValue} accessibilityLabel={t('dashboard.projectionValueLabel', { amount: projected.toFixed(2) })}>
+                S/ {projected.toFixed(2)}
+              </Text>
 
-        {spent === 0 && (
-          <View style={styles.emptyState}>
-            <Mascot size={40} />
-            <Text style={styles.empty}>{t('dashboard.emptyFirstExpense')}</Text>
-          </View>
+              {!lowConfidence && hasRange && (
+                <Text style={styles.projectionRange}>
+                  {t('dashboard.projectionRange', { low: projectedLow.toFixed(2), high: projectedHigh.toFixed(2) })}
+                </Text>
+              )}
+
+              {outlierCount > 0 && (
+                <Text style={styles.projectionOutlier}>
+                  {outlierCount === 1
+                    ? t('dashboard.outlierOne', { amount: outlierSpent.toFixed(2) })
+                    : t('dashboard.outlierMany', { count: outlierCount, amount: outlierSpent.toFixed(2) })}
+                </Text>
+              )}
+
+              {lowConfidence ? (
+                <Text style={[styles.projectionHint, styles.projectionHintWarning]}>
+                  {daysTracked === 1
+                    ? t('dashboard.lowConfidenceOne')
+                    : t('dashboard.lowConfidenceMany', { days: daysTracked })}
+                </Text>
+              ) : (
+                <Text style={styles.projectionHint}>
+                  {t('dashboard.hint')}
+                  {hasRange ? t('dashboard.hintRange') : ''}
+                </Text>
+              )}
+            </View>
+
+            {spent === 0 && (
+              <View style={styles.emptyState}>
+                <Mascot size={40} />
+                <Text style={styles.empty}>{t('dashboard.emptyFirstExpense')}</Text>
+              </View>
+            )}
+          </>
+        ) : (
+          <>
+            <Text style={styles.spentLabel}>{t('dashboard.totalSpent')}</Text>
+            <Text style={styles.spentValue} accessibilityLabel={t('dashboard.spentSoFarLabel', { amount: pastTotals.spent.toFixed(2) })}>
+              S/ {pastTotals.spent.toFixed(2)}
+            </Text>
+
+            {pastTotals.spent === 0 && (
+              <View style={styles.emptyState}>
+                <Mascot size={40} />
+                <Text style={styles.empty}>{t('dashboard.pastMonthEmpty')}</Text>
+              </View>
+            )}
+          </>
         )}
 
         <Text style={styles.sectionTitle}>{t('dashboard.incomeVsExpenses')}</Text>
-        {incomeSoFar > 0 ? (
+        {displayIncome > 0 ? (
           <View style={styles.balanceCard}>
             <View style={styles.balanceRow}>
               <Text style={styles.balanceLabel}>{t('dashboard.incomeThisMonth')}</Text>
-              <Text style={styles.balanceValue}>S/ {incomeSoFar.toFixed(2)}</Text>
+              <Text style={styles.balanceValue}>S/ {displayIncome.toFixed(2)}</Text>
             </View>
             <View style={styles.balanceRow}>
               <Text style={styles.balanceLabel}>{t('dashboard.spent')}</Text>
-              <Text style={styles.balanceValue}>S/ {spent.toFixed(2)}</Text>
+              <Text style={styles.balanceValue}>S/ {displaySpent.toFixed(2)}</Text>
             </View>
             <View style={[styles.balanceRow, styles.balanceRowTotal]}>
               <Text style={styles.balanceLabelTotal}>{t('dashboard.remaining')}</Text>
-              <Text style={[styles.balanceValueTotal, balance < 0 && styles.balanceNegative]}>
-                S/ {balance.toFixed(2)}
+              <Text style={[styles.balanceValueTotal, displayBalance < 0 && styles.balanceNegative]}>
+                S/ {displayBalance.toFixed(2)}
               </Text>
             </View>
           </View>
@@ -234,23 +323,13 @@ export default function DashboardScreen() {
         )}
 
         <Text style={styles.sectionTitle}>{t('dashboard.byCategory')}</Text>
-        {categoryRows.filter((r) => r.spent > 0 || r.budget != null).length === 0 ? (
-          <Text style={styles.empty}>{t('dashboard.emptyCategories')}</Text>
+        {visibleCategoryRows.length === 0 ? (
+          <Text style={styles.empty}>{isCurrentMonth ? t('dashboard.emptyCategories') : t('dashboard.pastMonthEmpty')}</Text>
         ) : (
-          categoryRows
-            .filter((r) => r.spent > 0 || r.budget != null)
-            .map((row) => {
-              const budgetRatio = row.budget ? Math.min(row.spent / row.budget, 1) : null;
-              const overBudget = row.budget != null && row.spent > row.budget;
-              const rowLowConfidence = row.daysTracked > 0 && row.daysTracked < 3;
-              const rowHasRange = !rowLowConfidence && row.projectedHigh - row.projectedLow > 1;
-              const vsAvg =
-                row.historicalAvg && row.historicalAvg > 0
-                  ? ((row.projected - row.historicalAvg) / row.historicalAvg) * 100
-                  : null;
+          visibleCategoryRows.map((row) => {
+            const cardAnim = getCardAnim(row.categoryId);
 
-              const cardAnim = getCardAnim(row.categoryId);
-
+            if (!isCurrentMonth) {
               return (
                 <Animated.View
                   key={row.categoryId}
@@ -269,61 +348,92 @@ export default function DashboardScreen() {
                     </View>
                     <Text style={styles.categoryCardSpent}>S/ {row.spent.toFixed(2)}</Text>
                   </View>
-
-                  {row.budget != null && (
-                    <>
-                      <View style={styles.categoryProgressTrack}>
-                        <View
-                          style={[
-                            styles.categoryProgressFill,
-                            { width: `${budgetRatio * 100}%`, backgroundColor: getCategoryColor(colors, row.categoryId) },
-                            overBudget && styles.categoryProgressFillOver,
-                          ]}
-                        />
-                      </View>
-                      <Text style={[styles.categoryBudgetText, overBudget && styles.categoryBudgetTextOver]}>
-                        {overBudget
-                          ? t('dashboard.overBudget', { over: (row.spent - row.budget).toFixed(2), budget: row.budget.toFixed(2) })
-                          : t('dashboard.underBudget', { left: (row.budget - row.spent).toFixed(2), budget: row.budget.toFixed(2) })}
-                      </Text>
-                    </>
-                  )}
-
-                  <Text style={styles.categoryProjection}>
-                    {t('dashboard.projected', { amount: row.projected.toFixed(2) })}
-                    {rowLowConfidence
-                      ? (row.daysTracked === 1
-                        ? t('dashboard.projectedLowConfidenceOne')
-                        : t('dashboard.projectedLowConfidenceMany', { days: row.daysTracked }))
-                      : rowHasRange
-                      ? t('dashboard.projectedRange', { low: row.projectedLow.toFixed(2), high: row.projectedHigh.toFixed(2) })
-                      : ''}
-                  </Text>
-
-                  {row.outlierCount > 0 && (
-                    <Text style={styles.categoryOutlier}>
-                      {row.outlierCount === 1
-                        ? t('dashboard.categoryOutlierOne', { amount: row.outlierSpent.toFixed(2) })
-                        : t('dashboard.categoryOutlierMany', { count: row.outlierCount, amount: row.outlierSpent.toFixed(2) })}
-                    </Text>
-                  )}
-
-                  {vsAvg != null ? (
-                    <Text style={[styles.categoryVsAvg, vsAvg > 0 ? styles.vsAvgUp : styles.vsAvgDown]}>
-                      {vsAvg > 0
-                        ? (row.monthsCounted === 1
-                          ? t('dashboard.vsAvgUpOne', { percent: Math.abs(vsAvg).toFixed(0), avg: row.historicalAvg.toFixed(2) })
-                          : t('dashboard.vsAvgUpMany', { percent: Math.abs(vsAvg).toFixed(0), avg: row.historicalAvg.toFixed(2), months: row.monthsCounted }))
-                        : (row.monthsCounted === 1
-                          ? t('dashboard.vsAvgDownOne', { percent: Math.abs(vsAvg).toFixed(0), avg: row.historicalAvg.toFixed(2) })
-                          : t('dashboard.vsAvgDownMany', { percent: Math.abs(vsAvg).toFixed(0), avg: row.historicalAvg.toFixed(2), months: row.monthsCounted }))}
-                    </Text>
-                  ) : (
-                    <Text style={styles.categoryNoHistory}>{t('dashboard.noHistory')}</Text>
-                  )}
                 </Animated.View>
               );
-            })
+            }
+
+            const budgetRatio = row.budget ? Math.min(row.spent / row.budget, 1) : null;
+            const overBudget = row.budget != null && row.spent > row.budget;
+            const rowLowConfidence = row.daysTracked > 0 && row.daysTracked < 3;
+            const rowHasRange = !rowLowConfidence && row.projectedHigh - row.projectedLow > 1;
+            const vsAvg =
+              row.historicalAvg && row.historicalAvg > 0
+                ? ((row.projected - row.historicalAvg) / row.historicalAvg) * 100
+                : null;
+
+            return (
+              <Animated.View
+                key={row.categoryId}
+                style={[
+                  styles.categoryCard,
+                  {
+                    opacity: cardAnim,
+                    transform: [{ translateY: cardAnim.interpolate({ inputRange: [0, 1], outputRange: [14, 0] }) }],
+                  },
+                ]}
+              >
+                <View style={styles.categoryCardHeader}>
+                  <View style={styles.categoryCardNameRow}>
+                    <View style={[styles.categoryDot, { backgroundColor: getCategoryColor(colors, row.categoryId) }]} />
+                    <Text style={styles.categoryCardName}>{row.name}</Text>
+                  </View>
+                  <Text style={styles.categoryCardSpent}>S/ {row.spent.toFixed(2)}</Text>
+                </View>
+
+                {row.budget != null && (
+                  <>
+                    <View style={styles.categoryProgressTrack}>
+                      <View
+                        style={[
+                          styles.categoryProgressFill,
+                          { width: `${budgetRatio * 100}%`, backgroundColor: getCategoryColor(colors, row.categoryId) },
+                          overBudget && styles.categoryProgressFillOver,
+                        ]}
+                      />
+                    </View>
+                    <Text style={[styles.categoryBudgetText, overBudget && styles.categoryBudgetTextOver]}>
+                      {overBudget
+                        ? t('dashboard.overBudget', { over: (row.spent - row.budget).toFixed(2), budget: row.budget.toFixed(2) })
+                        : t('dashboard.underBudget', { left: (row.budget - row.spent).toFixed(2), budget: row.budget.toFixed(2) })}
+                    </Text>
+                  </>
+                )}
+
+                <Text style={styles.categoryProjection}>
+                  {t('dashboard.projected', { amount: row.projected.toFixed(2) })}
+                  {rowLowConfidence
+                    ? (row.daysTracked === 1
+                      ? t('dashboard.projectedLowConfidenceOne')
+                      : t('dashboard.projectedLowConfidenceMany', { days: row.daysTracked }))
+                    : rowHasRange
+                    ? t('dashboard.projectedRange', { low: row.projectedLow.toFixed(2), high: row.projectedHigh.toFixed(2) })
+                    : ''}
+                </Text>
+
+                {row.outlierCount > 0 && (
+                  <Text style={styles.categoryOutlier}>
+                    {row.outlierCount === 1
+                      ? t('dashboard.categoryOutlierOne', { amount: row.outlierSpent.toFixed(2) })
+                      : t('dashboard.categoryOutlierMany', { count: row.outlierCount, amount: row.outlierSpent.toFixed(2) })}
+                  </Text>
+                )}
+
+                {vsAvg != null ? (
+                  <Text style={[styles.categoryVsAvg, vsAvg > 0 ? styles.vsAvgUp : styles.vsAvgDown]}>
+                    {vsAvg > 0
+                      ? (row.monthsCounted === 1
+                        ? t('dashboard.vsAvgUpOne', { percent: Math.abs(vsAvg).toFixed(0), avg: row.historicalAvg.toFixed(2) })
+                        : t('dashboard.vsAvgUpMany', { percent: Math.abs(vsAvg).toFixed(0), avg: row.historicalAvg.toFixed(2), months: row.monthsCounted }))
+                      : (row.monthsCounted === 1
+                        ? t('dashboard.vsAvgDownOne', { percent: Math.abs(vsAvg).toFixed(0), avg: row.historicalAvg.toFixed(2) })
+                        : t('dashboard.vsAvgDownMany', { percent: Math.abs(vsAvg).toFixed(0), avg: row.historicalAvg.toFixed(2), months: row.monthsCounted }))}
+                  </Text>
+                ) : (
+                  <Text style={styles.categoryNoHistory}>{t('dashboard.noHistory')}</Text>
+                )}
+              </Animated.View>
+            );
+          })
         )}
       </Animated.View>
     </ScrollView>

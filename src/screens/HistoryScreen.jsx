@@ -10,6 +10,7 @@ import { useLanguage } from '../i18n/LanguageContext';
 import { getCategoryColor } from '../theme/colors';
 import { getCategoryDisplayName } from '../config/defaultCategories';
 import Mascot from '../components/Mascot';
+import MonthSelector from '../components/MonthSelector';
 
 // LayoutAnimation viene desactivado por defecto en Android (sí funciona
 // de fábrica en iOS), hay que habilitarlo una vez para que la fila
@@ -29,25 +30,38 @@ export default function HistoryScreen() {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const d = new Date();
+    d.setDate(1);
+    return d;
+  });
 
   const contentOpacity = useRef(new Animated.Value(0)).current;
 
+  const isCurrentMonth = useMemo(() => {
+    const today = new Date();
+    return selectedMonth.getFullYear() === today.getFullYear() && selectedMonth.getMonth() === today.getMonth();
+  }, [selectedMonth]);
+
   const load = useCallback(async () => {
-    const monthStart = new Date();
-    monthStart.setDate(1);
-    const monthStartStr = monthStart.toISOString().slice(0, 10);
+    const monthStartStr = selectedMonth.toISOString().slice(0, 10);
+    const nextMonth = new Date(selectedMonth);
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    const nextMonthStr = nextMonth.toISOString().slice(0, 10);
 
     const { data, error } = await supabase
       .from('transactions')
       .select('id, amount, note, occurred_on, category_id, categories(name, default_key)')
       .gte('occurred_on', monthStartStr)
+      .lt('occurred_on', nextMonthStr)
       .order('occurred_on', { ascending: false })
       .order('created_at', { ascending: false });
 
     if (!error && data) setTransactions(data);
-  }, []);
+  }, [selectedMonth]);
 
   useEffect(() => {
+    setLoading(true);
     load().finally(() => setLoading(false));
   }, [load]);
 
@@ -110,16 +124,16 @@ export default function HistoryScreen() {
     );
   };
 
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator color={colors.primary} accessibilityLabel={t('history.loading')} />
-      </View>
-    );
-  }
-
   return (
     <Animated.View style={[styles.flex, { opacity: contentOpacity }]}>
+      <View style={styles.selectorWrap}>
+        <MonthSelector month={selectedMonth} onChange={setSelectedMonth} />
+      </View>
+      {loading ? (
+        <View style={styles.center}>
+          <ActivityIndicator color={colors.primary} accessibilityLabel={t('history.loading')} />
+        </View>
+      ) : (
       <SectionList
         style={styles.container}
         sections={sections}
@@ -129,7 +143,7 @@ export default function HistoryScreen() {
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Mascot size={40} />
-            <Text style={styles.empty}>{t('history.empty')}</Text>
+            <Text style={styles.empty}>{isCurrentMonth ? t('history.empty') : t('history.emptyPastMonth')}</Text>
           </View>
         }
         renderSectionHeader={({ section }) => {
@@ -167,6 +181,7 @@ export default function HistoryScreen() {
           );
         }}
       />
+      )}
     </Animated.View>
   );
 }
@@ -175,6 +190,7 @@ const getStyles = (colors) => StyleSheet.create({
   flex: { flex: 1 },
   container: { flex: 1, backgroundColor: colors.background },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
+  selectorWrap: { paddingTop: 16, backgroundColor: colors.background },
   empty: { textAlign: 'center', color: colors.textMuted, marginTop: 8, fontSize: 14 },
   emptyState: { alignItems: 'center', marginTop: 60, gap: 6 },
   sectionHeader: {

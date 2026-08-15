@@ -47,6 +47,10 @@ export const translations = {
 
     // Dashboard
     'dashboard.loading': 'Cargando tu resumen',
+    'dashboard.previousMonth': 'Mes anterior',
+    'dashboard.nextMonth': 'Mes siguiente',
+    'dashboard.totalSpent': 'Total gastado',
+    'dashboard.pastMonthEmpty': 'No hay gastos registrados este mes.',
     'dashboard.dayOfMonth': 'este mes, día {{day}} de {{total}}',
     'dashboard.spentSoFar': 'Gastado hasta hoy',
     'dashboard.spentSoFarLabel': 'Gastado hasta hoy: {{amount}} soles',
@@ -146,6 +150,7 @@ export const translations = {
     'history.today': 'Hoy',
     'history.yesterday': 'Ayer',
     'history.dayTotalLabel': 'Total del {{day}}: S/ {{amount}}',
+    'history.emptyPastMonth': 'No hay gastos registrados este mes.',
 
     // Presupuestos
     'budgets.loading': 'Cargando presupuestos',
@@ -286,6 +291,10 @@ export const translations = {
     'common.done': 'Done',
 
     'dashboard.loading': 'Loading your overview',
+    'dashboard.previousMonth': 'Previous month',
+    'dashboard.nextMonth': 'Next month',
+    'dashboard.totalSpent': 'Total spent',
+    'dashboard.pastMonthEmpty': 'No expenses logged this month.',
     'dashboard.dayOfMonth': 'this month, day {{day}} of {{total}}',
     'dashboard.spentSoFar': 'Spent so far',
     'dashboard.spentSoFarLabel': 'Spent so far: {{amount}} soles',
@@ -383,6 +392,7 @@ export const translations = {
     'history.today': 'Today',
     'history.yesterday': 'Yesterday',
     'history.dayTotalLabel': 'Total for {{day}}: S/ {{amount}}',
+    'history.emptyPastMonth': 'No expenses logged this month.',
 
     'budgets.loading': 'Loading budgets',
     'budgets.intro': 'Set a monthly limit for each category. Overview will warn you when you get close or go over. Leave it empty if you don’t want a limit for that category.',
