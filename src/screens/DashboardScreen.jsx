@@ -242,37 +242,35 @@ export default function DashboardScreen() {
       <Animated.View style={{ opacity: contentOpacity }}>
         <MonthSelector month={selectedMonth} onChange={setSelectedMonth} minMonth={minMonth} />
 
-        <View style={styles.viewToggle}>
-          <TouchableOpacity
-            style={[styles.viewToggleButton, viewMode === 'list' && styles.viewToggleButtonActive]}
-            onPress={() => setViewMode('list')}
-            accessibilityRole="button"
-            accessibilityLabel={t('dashboard.viewList')}
-            accessibilityState={{ selected: viewMode === 'list' }}
-          >
-            <Ionicons name="list-outline" size={16} color={viewMode === 'list' ? colors.primary : colors.textMuted} />
-            <Text style={[styles.viewToggleText, viewMode === 'list' && styles.viewToggleTextActive]}>
-              {t('dashboard.viewList')}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.viewToggleButton, viewMode === 'chart' && styles.viewToggleButtonActive]}
-            onPress={() => setViewMode('chart')}
-            accessibilityRole="button"
-            accessibilityLabel={t('dashboard.viewChart')}
-            accessibilityState={{ selected: viewMode === 'chart' }}
-          >
-            <Ionicons name="pie-chart-outline" size={16} color={viewMode === 'chart' ? colors.primary : colors.textMuted} />
-            <Text style={[styles.viewToggleText, viewMode === 'chart' && styles.viewToggleTextActive]}>
-              {t('dashboard.viewChart')}
-            </Text>
-          </TouchableOpacity>
+        <View style={styles.viewToggleWrap}>
+          <View style={styles.viewToggle}>
+            <TouchableOpacity
+              style={[styles.viewToggleButton, viewMode === 'list' && styles.viewToggleButtonActive]}
+              onPress={() => setViewMode('list')}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              accessibilityRole="button"
+              accessibilityLabel={t('dashboard.viewList')}
+              accessibilityState={{ selected: viewMode === 'list' }}
+            >
+              <Ionicons name="list-outline" size={18} color={viewMode === 'list' ? colors.primary : colors.textMuted} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.viewToggleButton, viewMode === 'chart' && styles.viewToggleButtonActive]}
+              onPress={() => setViewMode('chart')}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              accessibilityRole="button"
+              accessibilityLabel={t('dashboard.viewChart')}
+              accessibilityState={{ selected: viewMode === 'chart' }}
+            >
+              <Ionicons name="pie-chart-outline" size={18} color={viewMode === 'chart' ? colors.primary : colors.textMuted} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {isCurrentMonth ? (
           viewMode === 'chart' ? (
-            <View style={styles.radialSection}>
-              <RadialProgress progress={progress} color={colors.primary} size={168} strokeWidth={14}>
+            <View style={styles.radialCard}>
+              <RadialProgress progress={progress} color={colors.primary} size={160} strokeWidth={16}>
                 <Text style={styles.radialValue} accessibilityLabel={t('dashboard.spentSoFarLabel', { amount: spent.toFixed(2) })}>
                   S/ {spent.toFixed(0)}
                 </Text>
@@ -373,7 +371,10 @@ export default function DashboardScreen() {
           viewMode === 'chart' ? (
             <View style={styles.compareCard}>
               <View style={styles.compareRow}>
-                <Text style={styles.compareLabel}>{t('dashboard.incomeThisMonth')}</Text>
+                <View style={styles.compareLabelRow}>
+                  <Ionicons name="arrow-up-circle" size={16} color={colors.success} />
+                  <Text style={styles.compareLabel}>{t('dashboard.incomeThisMonth')}</Text>
+                </View>
                 <Text style={styles.compareValue}>S/ {displayIncome.toFixed(2)}</Text>
               </View>
               <View style={styles.compareTrack}>
@@ -381,7 +382,10 @@ export default function DashboardScreen() {
               </View>
 
               <View style={[styles.compareRow, styles.compareRowSpaced]}>
-                <Text style={styles.compareLabel}>{t('dashboard.spent')}</Text>
+                <View style={styles.compareLabelRow}>
+                  <Ionicons name="arrow-down-circle" size={16} color={colors.primary} />
+                  <Text style={styles.compareLabel}>{t('dashboard.spent')}</Text>
+                </View>
                 <Text style={styles.compareValue}>S/ {displaySpent.toFixed(2)}</Text>
               </View>
               <View style={styles.compareTrack}>
@@ -541,27 +545,38 @@ export default function DashboardScreen() {
 const getStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
+  viewToggleWrap: { flexDirection: 'row', justifyContent: 'center', marginBottom: 24 },
   viewToggle: {
     flexDirection: 'row',
     backgroundColor: colors.surfaceMuted,
-    borderRadius: 10,
+    borderRadius: 16,
     padding: 3,
-    marginBottom: 24,
     gap: 3,
   },
   viewToggleButton: {
-    flex: 1,
-    flexDirection: 'row',
+    width: 40,
+    height: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    minHeight: 38,
-    borderRadius: 8,
+    borderRadius: 13,
   },
-  viewToggleButtonActive: { backgroundColor: colors.surface },
-  viewToggleText: { fontSize: 13, fontWeight: '600', color: colors.textMuted },
-  viewToggleTextActive: { color: colors.primary },
-  radialSection: { alignItems: 'center' },
+  viewToggleButtonActive: {
+    backgroundColor: colors.surface,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  radialCard: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 16,
+    paddingVertical: 26,
+    paddingHorizontal: 20,
+  },
   radialValue: { fontSize: 24, fontWeight: '700', color: colors.text },
   radialCaption: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
   radialStats: { marginTop: 18, alignItems: 'center', gap: 4 },
@@ -573,8 +588,9 @@ const getStyles = (colors) => StyleSheet.create({
     borderRadius: 12,
     padding: 18,
   },
-  compareRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+  compareRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   compareRowSpaced: { marginTop: 16 },
+  compareLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   compareLabel: { fontSize: 13, color: colors.textMuted, fontWeight: '600' },
   compareValue: { fontSize: 14, color: colors.text, fontWeight: '700' },
   compareTrack: { height: 10, backgroundColor: colors.surfaceMuted, borderRadius: 5, overflow: 'hidden' },
