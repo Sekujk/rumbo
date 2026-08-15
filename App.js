@@ -86,7 +86,7 @@ function MainApp() {
   // Espera a que se sepa si hay que mostrar la guía antes de animar: si
   // arrancara apenas "ready" es true, un usuario nuevo la cortaría a medio
   // camino en cuanto se active showOnboarding un instante después, y con
-  // useNativeDriver el valor no vuelve a sincronizarse con JS — queda
+  // useNativeDriver el valor no vuelve a sincronizarse con JS, queda
   // pegado cerca de 0 (pantalla en blanco al volver de la guía).
   useEffect(() => {
     if (!ready || !onboardingChecked || showOnboarding) return;
