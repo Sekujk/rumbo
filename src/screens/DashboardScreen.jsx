@@ -9,6 +9,7 @@ import { getCategoryDisplayName } from '../config/defaultCategories';
 import Mascot from '../components/Mascot';
 import MonthSelector from '../components/MonthSelector';
 import CategoryDonutChart from '../components/CategoryDonutChart';
+import RadialProgress from '../components/RadialProgress';
 import { useEarliestExpenseMonth } from '../hooks/useEarliestExpenseMonth';
 
 export default function DashboardScreen() {
@@ -191,6 +192,12 @@ export default function DashboardScreen() {
   const displayIncome = isCurrentMonth ? incomeSoFar : pastTotals.income;
   const displayBalance = displayIncome - displaySpent;
 
+  // Para las barras comparativas del modo gráfico: la más larga de las dos
+  // llena el 100% del ancho, la otra queda proporcional a esa.
+  const compareMax = Math.max(displayIncome, displaySpent, 1);
+  const incomeBarPct = (displayIncome / compareMax) * 100;
+  const spentBarPct = (displaySpent / compareMax) * 100;
+
   useEffect(() => {
     if (loading) return;
     Animated.timing(contentOpacity, { toValue: 1, duration: 320, useNativeDriver: true }).start();
@@ -263,63 +270,88 @@ export default function DashboardScreen() {
         </View>
 
         {isCurrentMonth ? (
-          <>
-            <Text style={styles.eyebrow}>{t('dashboard.dayOfMonth', { day: daysElapsed, total: daysInMonth })}</Text>
+          viewMode === 'chart' ? (
+            <View style={styles.radialSection}>
+              <RadialProgress progress={progress} color={colors.primary} size={168} strokeWidth={14}>
+                <Text style={styles.radialValue} accessibilityLabel={t('dashboard.spentSoFarLabel', { amount: spent.toFixed(2) })}>
+                  S/ {spent.toFixed(0)}
+                </Text>
+                <Text style={styles.radialCaption}>{t('dashboard.spentSoFar')}</Text>
+              </RadialProgress>
 
-            <Text style={styles.spentLabel}>{t('dashboard.spentSoFar')}</Text>
-            <Text style={styles.spentValue} accessibilityLabel={t('dashboard.spentSoFarLabel', { amount: spent.toFixed(2) })}>
-              S/ {spent.toFixed(2)}
-            </Text>
+              <View style={styles.radialStats}>
+                <Text style={styles.radialStatLine}>{t('dashboard.dayOfMonth', { day: daysElapsed, total: daysInMonth })}</Text>
+                <Text style={styles.radialStatLine}>
+                  {t('dashboard.projectionLabel')}: S/ {projected.toFixed(2)}
+                </Text>
+              </View>
 
-            <View
-              style={styles.progressTrack}
-              accessibilityRole="progressbar"
-              accessibilityLabel={t('dashboard.progressLabel', { day: daysElapsed, total: daysInMonth })}
-            >
-              <Animated.View style={[styles.progressFill, { width: fillWidth }]} />
+              {spent === 0 && (
+                <View style={styles.emptyState}>
+                  <Mascot size={40} />
+                  <Text style={styles.empty}>{t('dashboard.emptyFirstExpense')}</Text>
+                </View>
+              )}
             </View>
+          ) : (
+            <>
+              <Text style={styles.eyebrow}>{t('dashboard.dayOfMonth', { day: daysElapsed, total: daysInMonth })}</Text>
 
-            <View style={styles.projectionCard}>
-              <Text style={styles.projectionLabel}>{t('dashboard.projectionLabel')}</Text>
-              <Text style={styles.projectionValue} accessibilityLabel={t('dashboard.projectionValueLabel', { amount: projected.toFixed(2) })}>
-                S/ {projected.toFixed(2)}
+              <Text style={styles.spentLabel}>{t('dashboard.spentSoFar')}</Text>
+              <Text style={styles.spentValue} accessibilityLabel={t('dashboard.spentSoFarLabel', { amount: spent.toFixed(2) })}>
+                S/ {spent.toFixed(2)}
               </Text>
 
-              {!lowConfidence && hasRange && (
-                <Text style={styles.projectionRange}>
-                  {t('dashboard.projectionRange', { low: projectedLow.toFixed(2), high: projectedHigh.toFixed(2) })}
-                </Text>
-              )}
-
-              {outlierCount > 0 && (
-                <Text style={styles.projectionOutlier}>
-                  {outlierCount === 1
-                    ? t('dashboard.outlierOne', { amount: outlierSpent.toFixed(2) })
-                    : t('dashboard.outlierMany', { count: outlierCount, amount: outlierSpent.toFixed(2) })}
-                </Text>
-              )}
-
-              {lowConfidence ? (
-                <Text style={[styles.projectionHint, styles.projectionHintWarning]}>
-                  {daysTracked === 1
-                    ? t('dashboard.lowConfidenceOne')
-                    : t('dashboard.lowConfidenceMany', { days: daysTracked })}
-                </Text>
-              ) : (
-                <Text style={styles.projectionHint}>
-                  {t('dashboard.hint')}
-                  {hasRange ? t('dashboard.hintRange') : ''}
-                </Text>
-              )}
-            </View>
-
-            {spent === 0 && (
-              <View style={styles.emptyState}>
-                <Mascot size={40} />
-                <Text style={styles.empty}>{t('dashboard.emptyFirstExpense')}</Text>
+              <View
+                style={styles.progressTrack}
+                accessibilityRole="progressbar"
+                accessibilityLabel={t('dashboard.progressLabel', { day: daysElapsed, total: daysInMonth })}
+              >
+                <Animated.View style={[styles.progressFill, { width: fillWidth }]} />
               </View>
-            )}
-          </>
+
+              <View style={styles.projectionCard}>
+                <Text style={styles.projectionLabel}>{t('dashboard.projectionLabel')}</Text>
+                <Text style={styles.projectionValue} accessibilityLabel={t('dashboard.projectionValueLabel', { amount: projected.toFixed(2) })}>
+                  S/ {projected.toFixed(2)}
+                </Text>
+
+                {!lowConfidence && hasRange && (
+                  <Text style={styles.projectionRange}>
+                    {t('dashboard.projectionRange', { low: projectedLow.toFixed(2), high: projectedHigh.toFixed(2) })}
+                  </Text>
+                )}
+
+                {outlierCount > 0 && (
+                  <Text style={styles.projectionOutlier}>
+                    {outlierCount === 1
+                      ? t('dashboard.outlierOne', { amount: outlierSpent.toFixed(2) })
+                      : t('dashboard.outlierMany', { count: outlierCount, amount: outlierSpent.toFixed(2) })}
+                  </Text>
+                )}
+
+                {lowConfidence ? (
+                  <Text style={[styles.projectionHint, styles.projectionHintWarning]}>
+                    {daysTracked === 1
+                      ? t('dashboard.lowConfidenceOne')
+                      : t('dashboard.lowConfidenceMany', { days: daysTracked })}
+                  </Text>
+                ) : (
+                  <Text style={styles.projectionHint}>
+                    {t('dashboard.hint')}
+                    {hasRange ? t('dashboard.hintRange') : ''}
+                  </Text>
+                )}
+              </View>
+
+              {spent === 0 && (
+                <View style={styles.emptyState}>
+                  <Mascot size={40} />
+                  <Text style={styles.empty}>{t('dashboard.emptyFirstExpense')}</Text>
+                </View>
+              )}
+            </>
+          )
         ) : (
           <>
             <Text style={styles.spentLabel}>{t('dashboard.totalSpent')}</Text>
@@ -338,22 +370,46 @@ export default function DashboardScreen() {
 
         <Text style={styles.sectionTitle}>{t('dashboard.incomeVsExpenses')}</Text>
         {displayIncome > 0 ? (
-          <View style={styles.balanceCard}>
-            <View style={styles.balanceRow}>
-              <Text style={styles.balanceLabel}>{t('dashboard.incomeThisMonth')}</Text>
-              <Text style={styles.balanceValue}>S/ {displayIncome.toFixed(2)}</Text>
-            </View>
-            <View style={styles.balanceRow}>
-              <Text style={styles.balanceLabel}>{t('dashboard.spent')}</Text>
-              <Text style={styles.balanceValue}>S/ {displaySpent.toFixed(2)}</Text>
-            </View>
-            <View style={[styles.balanceRow, styles.balanceRowTotal]}>
-              <Text style={styles.balanceLabelTotal}>{t('dashboard.remaining')}</Text>
-              <Text style={[styles.balanceValueTotal, displayBalance < 0 && styles.balanceNegative]}>
-                S/ {displayBalance.toFixed(2)}
+          viewMode === 'chart' ? (
+            <View style={styles.compareCard}>
+              <View style={styles.compareRow}>
+                <Text style={styles.compareLabel}>{t('dashboard.incomeThisMonth')}</Text>
+                <Text style={styles.compareValue}>S/ {displayIncome.toFixed(2)}</Text>
+              </View>
+              <View style={styles.compareTrack}>
+                <View style={[styles.compareFill, { width: `${incomeBarPct}%`, backgroundColor: colors.success }]} />
+              </View>
+
+              <View style={[styles.compareRow, styles.compareRowSpaced]}>
+                <Text style={styles.compareLabel}>{t('dashboard.spent')}</Text>
+                <Text style={styles.compareValue}>S/ {displaySpent.toFixed(2)}</Text>
+              </View>
+              <View style={styles.compareTrack}>
+                <View style={[styles.compareFill, { width: `${spentBarPct}%`, backgroundColor: colors.primary }]} />
+              </View>
+
+              <Text style={[styles.compareRemaining, displayBalance < 0 && styles.balanceNegative]}>
+                {t('dashboard.remaining')}: S/ {displayBalance.toFixed(2)}
               </Text>
             </View>
-          </View>
+          ) : (
+            <View style={styles.balanceCard}>
+              <View style={styles.balanceRow}>
+                <Text style={styles.balanceLabel}>{t('dashboard.incomeThisMonth')}</Text>
+                <Text style={styles.balanceValue}>S/ {displayIncome.toFixed(2)}</Text>
+              </View>
+              <View style={styles.balanceRow}>
+                <Text style={styles.balanceLabel}>{t('dashboard.spent')}</Text>
+                <Text style={styles.balanceValue}>S/ {displaySpent.toFixed(2)}</Text>
+              </View>
+              <View style={[styles.balanceRow, styles.balanceRowTotal]}>
+                <Text style={styles.balanceLabelTotal}>{t('dashboard.remaining')}</Text>
+                <Text style={[styles.balanceValueTotal, displayBalance < 0 && styles.balanceNegative]}>
+                  S/ {displayBalance.toFixed(2)}
+                </Text>
+              </View>
+            </View>
+          )
         ) : (
           <Text style={styles.empty}>{t('dashboard.emptyIncome')}</Text>
         )}
@@ -505,6 +561,25 @@ const getStyles = (colors) => StyleSheet.create({
   viewToggleButtonActive: { backgroundColor: colors.surface },
   viewToggleText: { fontSize: 13, fontWeight: '600', color: colors.textMuted },
   viewToggleTextActive: { color: colors.primary },
+  radialSection: { alignItems: 'center' },
+  radialValue: { fontSize: 24, fontWeight: '700', color: colors.text },
+  radialCaption: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
+  radialStats: { marginTop: 18, alignItems: 'center', gap: 4 },
+  radialStatLine: { fontSize: 13, color: colors.textMuted, fontWeight: '600' },
+  compareCard: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 18,
+  },
+  compareRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+  compareRowSpaced: { marginTop: 16 },
+  compareLabel: { fontSize: 13, color: colors.textMuted, fontWeight: '600' },
+  compareValue: { fontSize: 14, color: colors.text, fontWeight: '700' },
+  compareTrack: { height: 10, backgroundColor: colors.surfaceMuted, borderRadius: 5, overflow: 'hidden' },
+  compareFill: { height: '100%', borderRadius: 5 },
+  compareRemaining: { fontSize: 13, color: colors.success, fontWeight: '700', marginTop: 18, textAlign: 'center' },
   eyebrow: { fontSize: 12, color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 16 },
   spentLabel: { fontSize: 14, color: colors.textMuted },
   spentValue: { fontSize: 40, fontWeight: '700', color: colors.text, marginTop: 4 },
