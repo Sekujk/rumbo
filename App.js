@@ -55,6 +55,11 @@ function MainApp() {
   const [overlay, setOverlay] = useState(null);
   const [ready, setReady] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  // Se pone en true recién cuando se resolvió si hay que mostrar la guía
+  // o no: evita que la animación de entrada del contenido principal
+  // arranque y se corte a medio camino si la guía se activa un instante
+  // después (ver el efecto de mountOpacity/mountScale más abajo).
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
 
   // Entrada de toda la pantalla al terminar de loguearse: antes pasaba
   // de golpe del login al dashboard sin transición.
@@ -78,21 +83,30 @@ function MainApp() {
       .finally(() => setReady(true));
   }, [session.user.id]);
 
+  // Espera a que se sepa si hay que mostrar la guía antes de animar: si
+  // arrancara apenas "ready" es true, un usuario nuevo la cortaría a medio
+  // camino en cuanto se active showOnboarding un instante después, y con
+  // useNativeDriver el valor no vuelve a sincronizarse con JS — queda
+  // pegado cerca de 0 (pantalla en blanco al volver de la guía).
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || !onboardingChecked || showOnboarding) return;
+    mountOpacity.setValue(0);
+    mountScale.setValue(0.98);
     Animated.parallel([
       Animated.timing(mountOpacity, { toValue: 1, duration: 320, useNativeDriver: true }),
       Animated.spring(mountScale, { toValue: 1, useNativeDriver: true, friction: 8 }),
     ]).start();
-  }, [ready]);
+  }, [ready, onboardingChecked, showOnboarding]);
 
   // La guía se muestra sola la primera vez que alguien entra (nunca vio
   // la bandera en AsyncStorage); después, solo si la pide desde Perfil.
   useEffect(() => {
     if (!ready) return;
-    AsyncStorage.getItem(ONBOARDING_KEY).then((seen) => {
-      if (!seen) setShowOnboarding(true);
-    });
+    AsyncStorage.getItem(ONBOARDING_KEY)
+      .then((seen) => {
+        if (!seen) setShowOnboarding(true);
+      })
+      .finally(() => setOnboardingChecked(true));
   }, [ready]);
 
   const handleFinishOnboarding = () => {
@@ -164,7 +178,11 @@ function MainApp() {
   }
 
   if (showOnboarding) {
-    return <OnboardingScreen onFinish={handleFinishOnboarding} />;
+    return (
+      <SafeAreaView style={styles.flex}>
+        <OnboardingScreen onFinish={handleFinishOnboarding} />
+      </SafeAreaView>
+    );
   }
 
   const activeTabInfo = TABS.find((tab) => tab.id === activeTab);
