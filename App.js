@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Animated } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Animated, BackHandler, Alert } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -168,6 +168,28 @@ function MainApp() {
     animateTransition(-1);
     setOverlay(PROFILE_CHILDREN.includes(overlay) ? 'profile' : null);
   };
+
+  // El boton fisico de atras de Android no tenia ningun manejo propio en
+  // toda la app (solo dentro de Actualizaciones, ver UpdateScreen): por
+  // defecto Android cierra la app entera apenas no hay nada que lo
+  // intercepte. Con overlay abierto, se comporta como la flecha del
+  // header (vuelve un nivel). En las tabs (overlay null, no hay "atras"
+  // real a donde ir dentro de la app), se confirma antes de salir.
+  useEffect(() => {
+    const onBackPress = () => {
+      if (overlay) {
+        handleBack();
+        return true;
+      }
+      Alert.alert(t('app.exitConfirmTitle'), t('app.exitConfirmMessage'), [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('app.exitConfirmConfirm'), style: 'destructive', onPress: () => BackHandler.exitApp() },
+      ]);
+      return true;
+    };
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => subscription.remove();
+  }, [overlay, t]);
 
   if (!ready) {
     return (

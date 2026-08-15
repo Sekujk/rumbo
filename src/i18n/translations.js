@@ -15,6 +15,9 @@ export const translations = {
     'header.profile': 'Perfil',
     'header.back': 'Volver',
     'header.profileIcon': 'Perfil',
+    'app.exitConfirmTitle': '¿Salir de Rumbo?',
+    'app.exitConfirmMessage': 'Vas a cerrar la app.',
+    'app.exitConfirmConfirm': 'Salir',
 
     // Auth
     'auth.signInSubtitle': 'Ingresa a tu cuenta',
@@ -254,6 +257,9 @@ export const translations = {
     'header.profile': 'Profile',
     'header.back': 'Back',
     'header.profileIcon': 'Profile',
+    'app.exitConfirmTitle': 'Leave Rumbo?',
+    'app.exitConfirmMessage': "You're about to close the app.",
+    'app.exitConfirmConfirm': 'Leave',
 
     'auth.signInSubtitle': 'Sign in to your account',
     'auth.signUpSubtitle': 'Create your account',
