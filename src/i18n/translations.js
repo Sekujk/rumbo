@@ -180,6 +180,7 @@ export const translations = {
     // Sobre la app
     'about.tagline': 'Rumbo proyecta cuánto vas a terminar gastando el mes, desde tu primer gasto registrado.',
     'about.versionLabel': 'Versión {{version}}',
+    'about.repository': 'Ver repositorio en GitHub',
 
     // Guía de bienvenida
     'onboarding.step1Title': '¡Hola! Soy Sol 🪙',
@@ -380,6 +381,7 @@ export const translations = {
 
     'about.tagline': "Rumbo projects how much you'll end up spending this month, from your very first expense.",
     'about.versionLabel': 'Version {{version}}',
+    'about.repository': 'View repository on GitHub',
 
     'onboarding.step1Title': "Hi! I'm Sol 🪙",
     'onboarding.step1Body': "I'll show you how Rumbo works, in under a minute.",

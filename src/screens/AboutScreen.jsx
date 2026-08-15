@@ -1,10 +1,12 @@
 import React, { useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Linking } from 'react-native';
 import Constants from 'expo-constants';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { useLanguage } from '../i18n/LanguageContext';
 import Mascot from '../components/Mascot';
+
+const REPO_URL = 'https://github.com/Sekujk/rumbo';
 
 export default function AboutScreen({ onReplayGuide }) {
   const { colors } = useTheme();
@@ -30,6 +32,17 @@ export default function AboutScreen({ onReplayGuide }) {
         <Text style={styles.listRowText}>{t('profile.replayGuide')}</Text>
         <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
       </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.listRow, styles.listRowNoBorderTop]}
+        onPress={() => Linking.openURL(REPO_URL)}
+        accessibilityRole="button"
+        accessibilityLabel={t('about.repository')}
+      >
+        <Ionicons name="logo-github" size={20} color={colors.textMuted} />
+        <Text style={styles.listRowText}>{t('about.repository')}</Text>
+        <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -53,4 +66,5 @@ const getStyles = (colors) => StyleSheet.create({
     borderBottomColor: colors.border,
   },
   listRowText: { flex: 1, fontSize: 14, fontWeight: '600', color: colors.text },
+  listRowNoBorderTop: { borderTopWidth: 0, marginTop: 0 },
 });
