@@ -5,6 +5,7 @@ import { supabase } from '../config/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../theme/ThemeContext';
 import { useLanguage } from '../i18n/LanguageContext';
+import { getCategoryDisplayName } from '../config/defaultCategories';
 
 export default function BudgetsScreen() {
   const { session } = useAuth();
@@ -34,7 +35,7 @@ export default function BudgetsScreen() {
 
   const load = useCallback(async () => {
     const [{ data: categories, error: catError }, { data: budgets, error: budError }] = await Promise.all([
-      supabase.from('categories').select('id, name').order('name'),
+      supabase.from('categories').select('id, name, default_key').order('name'),
       supabase.from('budgets').select('id, category_id, monthly_limit'),
     ]);
     if (!catError && !budError) {
@@ -45,13 +46,13 @@ export default function BudgetsScreen() {
       setRows(
         (categories || []).map((c) => ({
           categoryId: c.id,
-          name: c.name,
+          name: getCategoryDisplayName(t, c),
           budgetId: budgetMap[c.id]?.id || null,
           value: budgetMap[c.id] ? String(budgetMap[c.id].monthly_limit) : '',
         }))
       );
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     load().finally(() => setLoading(false));

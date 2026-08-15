@@ -8,6 +8,7 @@ import { supabase } from '../config/supabase';
 import { useTheme } from '../theme/ThemeContext';
 import { useLanguage } from '../i18n/LanguageContext';
 import { getCategoryColor } from '../theme/colors';
+import { getCategoryDisplayName } from '../config/defaultCategories';
 import Mascot from '../components/Mascot';
 
 // LayoutAnimation viene desactivado por defecto en Android (sí funciona
@@ -38,7 +39,7 @@ export default function HistoryScreen() {
 
     const { data, error } = await supabase
       .from('transactions')
-      .select('id, amount, note, occurred_on, category_id, categories(name)')
+      .select('id, amount, note, occurred_on, category_id, categories(name, default_key)')
       .gte('occurred_on', monthStartStr)
       .order('occurred_on', { ascending: false })
       .order('created_at', { ascending: false });
@@ -86,7 +87,7 @@ export default function HistoryScreen() {
   };
 
   const handleDelete = (item) => {
-    const categoryName = item.categories?.name || t('history.noCategory');
+    const categoryName = item.categories ? getCategoryDisplayName(t, item.categories) : t('history.noCategory');
     Alert.alert(
       t('history.deleteTitle'),
       t('history.deleteMessage', { category: categoryName, amount: Number(item.amount).toFixed(2) }),
@@ -144,7 +145,7 @@ export default function HistoryScreen() {
           );
         }}
         renderItem={({ item }) => {
-          const categoryName = item.categories?.name || t('history.noCategory');
+          const categoryName = item.categories ? getCategoryDisplayName(t, item.categories) : t('history.noCategory');
           return (
             <View style={styles.row}>
               <View style={[styles.categoryDot, { backgroundColor: getCategoryColor(colors, item.category_id) }]} />

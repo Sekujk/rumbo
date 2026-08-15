@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../theme/ThemeContext';
 import { useLanguage } from '../i18n/LanguageContext';
 import { getCategoryColor } from '../theme/colors';
+import { MAX_CATEGORIES, getCategoryDisplayName } from '../config/defaultCategories';
 import Mascot from '../components/Mascot';
 
 export default function AddTransactionScreen() {
@@ -22,6 +23,9 @@ export default function AddTransactionScreen() {
   const [saving, setSaving] = useState(false);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [addingCategory, setAddingCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [savingCategory, setSavingCategory] = useState(false);
 
   // Un Animated.Value por categoría, creado una sola vez (no en cada
   // render) para el rebote al elegirla.
@@ -36,7 +40,7 @@ export default function AddTransactionScreen() {
   useEffect(() => {
     const loadCategories = async () => {
       setLoadingCategories(true);
-      const { data, error } = await supabase.from('categories').select('id, name').order('name');
+      const { data, error } = await supabase.from('categories').select('id, name, default_key').order('name');
       if (!error && data) {
         setCategories(data);
         setCategoryId(data[0]?.id || null);
@@ -52,6 +56,41 @@ export default function AddTransactionScreen() {
       Animated.timing(getChipScale(id), { toValue: 0.88, duration: 80, useNativeDriver: true }),
       Animated.spring(getChipScale(id), { toValue: 1, useNativeDriver: true, friction: 4 }),
     ]).start();
+  };
+
+  const handleAddCategory = async () => {
+    const trimmed = newCategoryName.trim();
+    if (!trimmed) return;
+    const isDuplicate = categories.some((c) => c.name.toLowerCase() === trimmed.toLowerCase());
+    if (isDuplicate) {
+      Alert.alert(t('add.newCategoryDuplicateTitle'), t('add.newCategoryDuplicateMessage'));
+      return;
+    }
+    setSavingCategory(true);
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .insert({ user_id: session.user.id, name: trimmed })
+        .select('id, name, default_key')
+        .single();
+      if (error) throw error;
+      setCategories((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+      setCategoryId(data.id);
+      setNewCategoryName('');
+      setAddingCategory(false);
+    } catch (error) {
+      Alert.alert(t('common.error'), error.message || t('add.newCategorySaveErrorMessage'));
+    } finally {
+      setSavingCategory(false);
+    }
+  };
+
+  const handleOpenAddCategory = () => {
+    if (categories.length >= MAX_CATEGORIES) {
+      Alert.alert(t('add.newCategoryLimitTitle'), t('add.newCategoryLimitMessage', { max: MAX_CATEGORIES }));
+      return;
+    }
+    setAddingCategory(true);
   };
 
   const playSuccessAnimation = () => {
@@ -153,6 +192,7 @@ export default function AddTransactionScreen() {
                 {categories.map((cat) => {
                   const selected = categoryId === cat.id;
                   const catColor = getCategoryColor(colors, cat.id);
+                  const displayName = getCategoryDisplayName(t, cat);
                   return (
                     <Animated.View key={cat.id} style={{ transform: [{ scale: getChipScale(cat.id) }] }}>
                       <TouchableOpacity
@@ -163,16 +203,64 @@ export default function AddTransactionScreen() {
                         onPress={() => handleSelectCategory(cat.id)}
                         accessibilityRole="radio"
                         accessibilityState={{ selected }}
-                        accessibilityLabel={t('add.categoryLabel', { name: cat.name })}
+                        accessibilityLabel={t('add.categoryLabel', { name: displayName })}
                       >
                         {!selected && <View style={[styles.chipDot, { backgroundColor: catColor }]} />}
                         <Text style={[styles.categoryChipText, selected && styles.categoryChipTextActive]}>
-                          {cat.name}
+                          {displayName}
                         </Text>
                       </TouchableOpacity>
                     </Animated.View>
                   );
                 })}
+
+                {addingCategory ? (
+                  <View style={styles.newCategoryRow}>
+                    <TextInput
+                      style={styles.newCategoryInput}
+                      placeholder={t('add.newCategoryPlaceholder')}
+                      placeholderTextColor={colors.placeholder}
+                      value={newCategoryName}
+                      onChangeText={setNewCategoryName}
+                      autoFocus
+                      onSubmitEditing={handleAddCategory}
+                      accessibilityLabel={t('add.newCategoryPlaceholder')}
+                    />
+                    <TouchableOpacity
+                      style={styles.newCategoryIconButton}
+                      onPress={handleAddCategory}
+                      disabled={savingCategory}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('add.confirmNewCategory')}
+                    >
+                      {savingCategory ? (
+                        <ActivityIndicator size="small" color={colors.primary} />
+                      ) : (
+                        <Ionicons name="checkmark" size={20} color={colors.primary} />
+                      )}
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.newCategoryIconButton}
+                      onPress={() => {
+                        setAddingCategory(false);
+                        setNewCategoryName('');
+                      }}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('add.cancelNewCategory')}
+                    >
+                      <Ionicons name="close" size={20} color={colors.textMuted} />
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.addCategoryChip}
+                    onPress={handleOpenAddCategory}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('add.addCategory')}
+                  >
+                    <Ionicons name="add" size={18} color={colors.textMuted} />
+                  </TouchableOpacity>
+                )}
               </View>
             )}
           </>
@@ -268,6 +356,34 @@ const getStyles = (colors) => StyleSheet.create({
     borderColor: colors.borderStrong,
   },
   chipDot: { width: 8, height: 8, borderRadius: 4 },
+  addCategoryChip: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.borderStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  newCategoryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    width: '100%',
+  },
+  newCategoryInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    borderRadius: 22,
+    paddingHorizontal: 16,
+    minHeight: 44,
+    fontSize: 14,
+    color: colors.text,
+    backgroundColor: colors.surface,
+  },
+  newCategoryIconButton: { width: 40, height: 44, alignItems: 'center', justifyContent: 'center' },
   categoryChipText: { color: colors.text, fontSize: 14 },
   categoryChipTextActive: { color: colors.background },
   button: { backgroundColor: colors.primary, borderRadius: 8, padding: 16, minHeight: 52, alignItems: 'center', justifyContent: 'center', marginTop: 32 },

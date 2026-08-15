@@ -105,6 +105,22 @@ export const translations = {
     'add.missingCategoryTitle': 'Falta categoría',
     'add.missingCategoryMessage': 'Elige una categoría',
     'add.saveErrorMessage': 'No se pudo guardar',
+    'add.addCategory': 'Nueva categoría',
+    'add.newCategoryPlaceholder': 'Nombre de la categoría',
+    'add.confirmNewCategory': 'Crear categoría',
+    'add.cancelNewCategory': 'Cancelar',
+    'add.newCategoryLimitTitle': 'Límite alcanzado',
+    'add.newCategoryLimitMessage': 'Puedes tener hasta {{max}} categorías.',
+    'add.newCategoryDuplicateTitle': 'Ya existe',
+    'add.newCategoryDuplicateMessage': 'Ya tienes una categoría con ese nombre.',
+    'add.newCategorySaveErrorMessage': 'No se pudo crear la categoría',
+
+    // Categorías de fábrica
+    'category.food': 'Comida',
+    'category.transport': 'Transporte',
+    'category.leisure': 'Ocio',
+    'category.health': 'Salud',
+    'category.other': 'Otros',
 
     // Historial
     'history.loading': 'Cargando historial',
@@ -314,6 +330,22 @@ export const translations = {
     'add.missingCategoryTitle': 'Missing category',
     'add.missingCategoryMessage': 'Choose a category',
     'add.saveErrorMessage': "Couldn't save",
+    'add.addCategory': 'New category',
+    'add.newCategoryPlaceholder': 'Category name',
+    'add.confirmNewCategory': 'Create category',
+    'add.cancelNewCategory': 'Cancel',
+    'add.newCategoryLimitTitle': 'Limit reached',
+    'add.newCategoryLimitMessage': 'You can have up to {{max}} categories.',
+    'add.newCategoryDuplicateTitle': 'Already exists',
+    'add.newCategoryDuplicateMessage': 'You already have a category with that name.',
+    'add.newCategorySaveErrorMessage': "Couldn't create the category",
+
+    // Default categories
+    'category.food': 'Food',
+    'category.transport': 'Transport',
+    'category.leisure': 'Leisure',
+    'category.health': 'Health',
+    'category.other': 'Other',
 
     'history.loading': 'Loading history',
     'history.empty': "You haven't logged any expenses this month yet.",

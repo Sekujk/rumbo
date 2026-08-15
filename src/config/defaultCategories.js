@@ -1,4 +1,12 @@
-export const DEFAULT_CATEGORIES = ['Comida', 'Transporte', 'Ocio', 'Salud', 'Otros'];
+export const DEFAULT_CATEGORIES = [
+  { key: 'food', name: 'Comida' },
+  { key: 'transport', name: 'Transporte' },
+  { key: 'leisure', name: 'Ocio' },
+  { key: 'health', name: 'Salud' },
+  { key: 'other', name: 'Otros' },
+];
+
+export const MAX_CATEGORIES = 10;
 
 export const ensureDefaultCategories = async (supabase, userId) => {
   const { data: existing, error: fetchError } = await supabase
@@ -8,7 +16,12 @@ export const ensureDefaultCategories = async (supabase, userId) => {
   if (fetchError) throw fetchError;
   if (existing && existing.length > 0) return;
 
-  const rows = DEFAULT_CATEGORIES.map((name) => ({ user_id: userId, name }));
+  const rows = DEFAULT_CATEGORIES.map(({ key, name }) => ({ user_id: userId, name, default_key: key }));
   const { error: insertError } = await supabase.from('categories').insert(rows);
   if (insertError) throw insertError;
 };
+
+// Las categorias de fabrica tienen default_key y se traducen; las que
+// crea el usuario no tienen key y se muestran tal cual las escribio.
+export const getCategoryDisplayName = (t, category) =>
+  category?.default_key ? t(`category.${category.default_key}`) : category?.name;

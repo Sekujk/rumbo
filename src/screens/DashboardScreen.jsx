@@ -4,6 +4,7 @@ import { supabase } from '../config/supabase';
 import { useTheme } from '../theme/ThemeContext';
 import { useLanguage } from '../i18n/LanguageContext';
 import { getCategoryColor } from '../theme/colors';
+import { getCategoryDisplayName } from '../config/defaultCategories';
 import Mascot from '../components/Mascot';
 
 export default function DashboardScreen() {
@@ -45,7 +46,7 @@ export default function DashboardScreen() {
       supabase.from('monthly_projection').select('*').maybeSingle(),
       supabase.from('monthly_income').select('*').maybeSingle(),
       supabase.from('category_monthly_projection').select('*'),
-      supabase.from('categories').select('id, name').order('name'),
+      supabase.from('categories').select('id, name, default_key').order('name'),
       supabase.from('budgets').select('category_id, monthly_limit'),
       supabase.from('category_historical_average').select('*'),
     ]);
@@ -67,7 +68,7 @@ export default function DashboardScreen() {
           const h = histMap[c.id];
           return {
             categoryId: c.id,
-            name: c.name,
+            name: getCategoryDisplayName(t, c),
             spent: p ? Number(p.spent_so_far) : 0,
             projected: p ? Number(p.projected_month_total) : 0,
             projectedLow: p ? Number(p.projected_low) : 0,
@@ -83,7 +84,7 @@ export default function DashboardScreen() {
         .sort((a, b) => b.spent - a.spent);
       setCategoryRows(rows);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     load().finally(() => setLoading(false));
