@@ -145,6 +145,12 @@ export const translations = {
     'budgets.invalidAmountMessage': 'Ingresa un presupuesto mayor a 0',
     'budgets.saveErrorMessage': 'No se pudo guardar el presupuesto',
     'budgets.clearErrorMessage': 'No se pudo quitar el presupuesto',
+    'budgets.archiveLabel': 'Archivar {{name}}',
+    'budgets.archiveTitle': '¿Archivar "{{name}}"?',
+    'budgets.archiveMessageWithCount': 'Tiene {{count}} gastos registrados. Se quedan en tu historial tal cual, pero ya no vas a poder elegir "{{name}}" para gastos nuevos.',
+    'budgets.archiveMessageEmpty': 'No vas a poder elegir "{{name}}" para gastos nuevos. Como todavía no tiene gastos registrados, no afecta tu historial.',
+    'budgets.archiveConfirm': 'Archivar',
+    'budgets.archiveErrorMessage': 'No se pudo archivar la categoría',
 
     // Perfil
     'profile.memberSince': 'Miembro desde {{date}}',
@@ -368,6 +374,12 @@ export const translations = {
     'budgets.invalidAmountMessage': 'Enter a budget greater than 0',
     'budgets.saveErrorMessage': "Couldn't save the budget",
     'budgets.clearErrorMessage': "Couldn't remove the budget",
+    'budgets.archiveLabel': 'Archive {{name}}',
+    'budgets.archiveTitle': 'Archive "{{name}}"?',
+    'budgets.archiveMessageWithCount': "It has {{count}} recorded expenses. They stay in your history as they are, but you won't be able to pick \"{{name}}\" for new expenses.",
+    'budgets.archiveMessageEmpty': "You won't be able to pick \"{{name}}\" for new expenses. Since it has no expenses yet, this doesn't affect your history.",
+    'budgets.archiveConfirm': 'Archive',
+    'budgets.archiveErrorMessage': "Couldn't archive the category",
 
     'profile.memberSince': 'Member since {{date}}',
     'profile.changePassword': 'Change password',

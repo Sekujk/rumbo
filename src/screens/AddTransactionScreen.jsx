@@ -40,7 +40,11 @@ export default function AddTransactionScreen() {
   useEffect(() => {
     const loadCategories = async () => {
       setLoadingCategories(true);
-      const { data, error } = await supabase.from('categories').select('id, name, default_key').order('name');
+      const { data, error } = await supabase
+        .from('categories')
+        .select('id, name, default_key')
+        .is('archived_at', null)
+        .order('name');
       if (!error && data) {
         setCategories(data);
         setCategoryId(data[0]?.id || null);
