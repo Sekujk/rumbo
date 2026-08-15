@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, ScrollView, RefreshControl, Animated } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, ScrollView, RefreshControl, Animated, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../config/supabase';
 import { useTheme } from '../theme/ThemeContext';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -21,6 +22,10 @@ export default function DashboardScreen() {
     return d;
   });
   const minMonth = useEarliestExpenseMonth();
+  // 'list' = tarjetas por categoría (como era antes del gráfico), 'chart'
+  // = solo la dona. Antes convivían las dos siempre, lo que obligaba a
+  // bajar para llegar a la dona y se veía cargado; ahora es exclusivo.
+  const [viewMode, setViewMode] = useState('list');
   const [projection, setProjection] = useState(null);
   const [income, setIncome] = useState(null);
   const [categoryRows, setCategoryRows] = useState([]);
@@ -230,6 +235,33 @@ export default function DashboardScreen() {
       <Animated.View style={{ opacity: contentOpacity }}>
         <MonthSelector month={selectedMonth} onChange={setSelectedMonth} minMonth={minMonth} />
 
+        <View style={styles.viewToggle}>
+          <TouchableOpacity
+            style={[styles.viewToggleButton, viewMode === 'list' && styles.viewToggleButtonActive]}
+            onPress={() => setViewMode('list')}
+            accessibilityRole="button"
+            accessibilityLabel={t('dashboard.viewList')}
+            accessibilityState={{ selected: viewMode === 'list' }}
+          >
+            <Ionicons name="list-outline" size={16} color={viewMode === 'list' ? colors.primary : colors.textMuted} />
+            <Text style={[styles.viewToggleText, viewMode === 'list' && styles.viewToggleTextActive]}>
+              {t('dashboard.viewList')}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.viewToggleButton, viewMode === 'chart' && styles.viewToggleButtonActive]}
+            onPress={() => setViewMode('chart')}
+            accessibilityRole="button"
+            accessibilityLabel={t('dashboard.viewChart')}
+            accessibilityState={{ selected: viewMode === 'chart' }}
+          >
+            <Ionicons name="pie-chart-outline" size={16} color={viewMode === 'chart' ? colors.primary : colors.textMuted} />
+            <Text style={[styles.viewToggleText, viewMode === 'chart' && styles.viewToggleTextActive]}>
+              {t('dashboard.viewChart')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         {isCurrentMonth ? (
           <>
             <Text style={styles.eyebrow}>{t('dashboard.dayOfMonth', { day: daysElapsed, total: daysInMonth })}</Text>
@@ -329,10 +361,14 @@ export default function DashboardScreen() {
         <Text style={styles.sectionTitle}>{t('dashboard.byCategory')}</Text>
         {visibleCategoryRows.length === 0 ? (
           <Text style={styles.empty}>{isCurrentMonth ? t('dashboard.emptyCategories') : t('dashboard.pastMonthEmpty')}</Text>
+        ) : viewMode === 'chart' ? (
+          chartRows.length > 0 ? (
+            <CategoryDonutChart rows={chartRows} total={displaySpent} />
+          ) : (
+            <Text style={styles.empty}>{t('dashboard.emptyCategories')}</Text>
+          )
         ) : (
-          <>
-          {chartRows.length > 1 && <CategoryDonutChart rows={chartRows} total={displaySpent} />}
-          {visibleCategoryRows.map((row) => {
+          visibleCategoryRows.map((row) => {
             const cardAnim = getCardAnim(row.categoryId);
 
             if (!isCurrentMonth) {
@@ -439,8 +475,7 @@ export default function DashboardScreen() {
                 )}
               </Animated.View>
             );
-          })}
-          </>
+          })
         )}
       </Animated.View>
     </ScrollView>
@@ -450,6 +485,26 @@ export default function DashboardScreen() {
 const getStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
+  viewToggle: {
+    flexDirection: 'row',
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: 10,
+    padding: 3,
+    marginBottom: 24,
+    gap: 3,
+  },
+  viewToggleButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    minHeight: 38,
+    borderRadius: 8,
+  },
+  viewToggleButtonActive: { backgroundColor: colors.surface },
+  viewToggleText: { fontSize: 13, fontWeight: '600', color: colors.textMuted },
+  viewToggleTextActive: { color: colors.primary },
   eyebrow: { fontSize: 12, color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 16 },
   spentLabel: { fontSize: 14, color: colors.textMuted },
   spentValue: { fontSize: 40, fontWeight: '700', color: colors.text, marginTop: 4 },
