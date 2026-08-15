@@ -1,6 +1,19 @@
 # Rumbo
 
+<p>
+  <a href="https://github.com/Sekujk/rumbo/releases/latest"><img alt="Última versión" src="https://img.shields.io/github/v/release/Sekujk/rumbo?label=versi%C3%B3n&color=0e7490" /></a>
+  <a href="https://github.com/Sekujk/rumbo/releases"><img alt="Descargas" src="https://img.shields.io/github/downloads/Sekujk/rumbo/total?label=descargas&color=0e7490" /></a>
+  <img alt="Plataforma" src="https://img.shields.io/badge/plataforma-Android-0e7490" />
+</p>
+
 Rumbo es una app móvil de finanzas personales. Desde el primer gasto registrado, proyecta cuánto vas a terminar gastando el mes, y separa las compras puntuales del gasto recurrente para que esa proyección no se distorsione por una compra grande y poco común.
+
+## Descarga
+
+La última versión, con el `.apk` listo para instalar en Android, está en la [página de Releases](https://github.com/Sekujk/rumbo/releases/latest).
+
+> [!NOTE]
+> Android va a pedir permiso para "instalar apps de origen desconocido" la primera vez — es esperable al instalar por fuera de Play Store, hay que aceptarlo una sola vez.
 
 ## Capturas
 
@@ -37,7 +50,3 @@ Los datos se guardan en Supabase (Postgres). Cada usuario solo puede ver y modif
 ## Cómo procesamos los datos
 
 Solo se guarda lo que el usuario ingresa directamente (correo, gastos, ingresos, presupuestos). Nadie más puede ver los datos de otro usuario. Cualquier usuario puede eliminar su cuenta y toda su información en cualquier momento desde el perfil de la app.
-
-## Versión
-
-Versión actual: [`1.0.0`](https://github.com/Sekujk/rumbo/releases/tag/v1.0.0). El `.apk` para instalar en Android está adjunto en esa misma página.
