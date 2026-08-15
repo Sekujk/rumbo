@@ -2,15 +2,6 @@
 
 Rumbo es una app móvil de finanzas personales. Desde el primer gasto registrado, proyecta cuánto vas a terminar gastando el mes, y separa las compras puntuales del gasto recurrente para que esa proyección no se distorsione por una compra grande y poco común.
 
-## Capturas
-
-<p align="center">
-  <img src="docs/screenshots/dashboard.png" width="200" alt="Resumen y proyección del mes" />
-  <img src="docs/screenshots/agregar.png" width="200" alt="Agregar un gasto o ingreso" />
-  <img src="docs/screenshots/historial.png" width="200" alt="Historial agrupado por día" />
-  <img src="docs/screenshots/perfil.png" width="200" alt="Perfil con preferencias" />
-</p>
-
 ## Funcionalidades
 
 - **Proyección de gasto mensual** con un rango de confianza, calculada en total y por categoría, en vez de un número único que finge una precisión que los datos no tienen.

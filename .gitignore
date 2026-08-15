@@ -45,3 +45,6 @@ yarn-error.*
 .claude/
 CLAUDE.md
 AGENTS.md
+
+# notas y capturas internas, no se publican en el repositorio
+docs/
