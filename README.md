@@ -10,10 +10,7 @@ Rumbo es una app móvil de finanzas personales. Desde el primer gasto registrado
 
 ## Descarga
 
-La última versión, con el `.apk` listo para instalar en Android, está en la [página de Releases](https://github.com/Sekujk/rumbo/releases/latest).
-
-> [!NOTE]
-> Android va a pedir permiso para "instalar apps de origen desconocido" la primera vez — es esperable al instalar por fuera de Play Store, hay que aceptarlo una sola vez.
+La última versión, con el `.apk` listo para instalar en Android, está en la [página de Releases](https://github.com/Sekujk/rumbo/releases/latest). Android va a pedir permiso para "instalar apps de origen desconocido" la primera vez, algo esperable al instalar por fuera de Play Store; hay que aceptarlo una sola vez.
 
 ## Capturas
 
