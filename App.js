@@ -231,7 +231,7 @@ function MainApp() {
           ) : overlay === 'settings' ? (
             <SettingsScreen />
           ) : overlay === 'update' ? (
-            <UpdateScreen />
+            <UpdateScreen onExit={handleBack} />
           ) : overlay === 'about' ? (
             <AboutScreen onReplayGuide={handleReplayGuide} />
           ) : (

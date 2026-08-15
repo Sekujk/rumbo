@@ -1,11 +1,12 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Platform, Linking } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Platform, Linking, Animated, BackHandler, Alert } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as IntentLauncher from 'expo-intent-launcher';
 import Constants from 'expo-constants';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { useLanguage } from '../i18n/LanguageContext';
+import Mascot from '../components/Mascot';
 
 const RELEASES_API = 'https://api.github.com/repos/Sekujk/rumbo/releases/latest';
 const RELEASES_PAGE = 'https://github.com/Sekujk/rumbo/releases/latest';
@@ -24,15 +25,19 @@ function isNewerVersion(remote, local) {
   return false;
 }
 
-export default function UpdateScreen() {
+export default function UpdateScreen({ onExit }) {
   const { colors } = useTheme();
   const { t } = useLanguage();
   const styles = useMemo(() => getStyles(colors), [colors]);
 
   const currentVersion = Constants.expoConfig?.version || '1.0.0';
-  const [status, setStatus] = useState('checking'); // checking | upToDate | available | downloading | error
+  const [status, setStatus] = useState('checking'); // checking | upToDate | available | downloading | error | downloadError
   const [latest, setLatest] = useState(null); // { version, apkUrl }
   const [progress, setProgress] = useState(0);
+
+  const cardOpacity = useRef(new Animated.Value(0)).current;
+  const cardTranslate = useRef(new Animated.Value(10)).current;
+  const progressAnim = useRef(new Animated.Value(0)).current;
 
   const checkForUpdates = async () => {
     setStatus('checking');
@@ -57,10 +62,51 @@ export default function UpdateScreen() {
     checkForUpdates();
   }, []);
 
+  // Fundido de entrada cada vez que cambia el estado principal (no
+  // mientras la barra de descarga se mueve dentro del mismo estado).
+  useEffect(() => {
+    if (status === 'downloading') return;
+    cardOpacity.setValue(0);
+    cardTranslate.setValue(10);
+    Animated.parallel([
+      Animated.timing(cardOpacity, { toValue: 1, duration: 260, useNativeDriver: true }),
+      Animated.timing(cardTranslate, { toValue: 0, duration: 260, useNativeDriver: true }),
+    ]).start();
+  }, [status]);
+
+  useEffect(() => {
+    Animated.timing(progressAnim, { toValue: progress, duration: 200, useNativeDriver: false }).start();
+  }, [progress]);
+
+  // Salir de esta pantalla con el boton fisico de atras de Android
+  // no tenia ningun manejo propio (nada en la app lo intercepta), asi
+  // que por defecto cerraba la app entera en vez de volver a Perfil.
+  // Ademas, si hay una descarga en curso, se pierde si sales sin avisar.
+  useEffect(() => {
+    const onBackPress = () => {
+      if (status === 'downloading') {
+        Alert.alert(
+          t('update.exitConfirmTitle'),
+          t('update.exitConfirmMessage'),
+          [
+            { text: t('common.cancel'), style: 'cancel' },
+            { text: t('update.exitConfirmConfirm'), style: 'destructive', onPress: onExit },
+          ]
+        );
+      } else {
+        onExit?.();
+      }
+      return true;
+    };
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => subscription.remove();
+  }, [status, onExit, t]);
+
   const handleDownloadAndInstall = async () => {
     if (!latest?.apkUrl) return;
     setStatus('downloading');
     setProgress(0);
+    progressAnim.setValue(0);
     try {
       const fileUri = `${FileSystem.cacheDirectory}Rumbo.apk`;
       const downloadResumable = FileSystem.createDownloadResumable(
@@ -88,18 +134,13 @@ export default function UpdateScreen() {
   };
 
   const percent = Math.round(progress * 100);
+  const progressWidth = progressAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
 
   return (
     <View style={styles.container}>
-      <View style={styles.iconWrap}>
-        <Ionicons
-          name={status === 'upToDate' ? 'checkmark-circle' : 'cloud-download-outline'}
-          size={40}
-          color={status === 'upToDate' ? colors.success : colors.primary}
-        />
+      <View style={styles.versionPill}>
+        <Text style={styles.versionPillText}>{t('update.currentVersion', { version: currentVersion })}</Text>
       </View>
-
-      <Text style={styles.currentVersion}>{t('update.currentVersion', { version: currentVersion })}</Text>
 
       {status === 'checking' && (
         <View style={styles.center}>
@@ -109,16 +150,20 @@ export default function UpdateScreen() {
       )}
 
       {status === 'upToDate' && (
-        <>
+        <Animated.View style={[styles.card, { opacity: cardOpacity, transform: [{ translateY: cardTranslate }] }]}>
+          <Mascot size={56} />
           <Text style={styles.statusText}>{t('update.upToDate', { version: currentVersion })}</Text>
           <TouchableOpacity style={styles.secondaryButton} onPress={checkForUpdates} accessibilityRole="button">
             <Text style={styles.secondaryButtonText}>{t('update.checkAgain')}</Text>
           </TouchableOpacity>
-        </>
+        </Animated.View>
       )}
 
       {(status === 'available' || status === 'downloadError') && latest && (
-        <>
+        <Animated.View style={[styles.card, { opacity: cardOpacity, transform: [{ translateY: cardTranslate }] }]}>
+          <View style={styles.iconCircle}>
+            <Ionicons name="cloud-download-outline" size={32} color={colors.primary} />
+          </View>
           <Text style={styles.statusText}>{t('update.available', { version: latest.version })}</Text>
           {status === 'downloadError' && <Text style={styles.errorText}>{t('update.downloadErrorMessage')}</Text>}
           {Platform.OS === 'android' && latest.apkUrl ? (
@@ -128,6 +173,7 @@ export default function UpdateScreen() {
               accessibilityRole="button"
               accessibilityLabel={t('update.downloadButton')}
             >
+              <Ionicons name="download-outline" size={18} color={colors.background} />
               <Text style={styles.buttonText}>{t('update.downloadButton')}</Text>
             </TouchableOpacity>
           ) : (
@@ -140,25 +186,30 @@ export default function UpdateScreen() {
           >
             <Text style={styles.secondaryButtonText}>{t('update.viewOnGithub')}</Text>
           </TouchableOpacity>
-        </>
+        </Animated.View>
       )}
 
       {status === 'downloading' && (
-        <View style={styles.center}>
+        <View style={styles.card}>
+          <View style={styles.iconCircle}>
+            <Ionicons name="cloud-download-outline" size={32} color={colors.primary} />
+          </View>
+          <Text style={styles.percentText}>{percent}%</Text>
           <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: `${percent}%` }]} />
+            <Animated.View style={[styles.progressFill, { width: progressWidth }]} />
           </View>
           <Text style={styles.statusText}>{t('update.downloading', { percent })}</Text>
         </View>
       )}
 
       {status === 'error' && (
-        <>
+        <Animated.View style={[styles.card, { opacity: cardOpacity, transform: [{ translateY: cardTranslate }] }]}>
+          <Ionicons name="alert-circle-outline" size={32} color={colors.danger} />
           <Text style={styles.errorText}>{t('update.errorMessage')}</Text>
           <TouchableOpacity style={styles.secondaryButton} onPress={checkForUpdates} accessibilityRole="button">
             <Text style={styles.secondaryButtonText}>{t('update.checkAgain')}</Text>
           </TouchableOpacity>
-        </>
+        </Animated.View>
       )}
     </View>
   );
@@ -166,14 +217,42 @@ export default function UpdateScreen() {
 
 const getStyles = (colors) => StyleSheet.create({
   container: { flex: 1, padding: 24, alignItems: 'center', backgroundColor: colors.background },
-  iconWrap: { marginTop: 24, marginBottom: 12 },
-  currentVersion: { fontSize: 13, color: colors.textFaint, marginBottom: 24 },
+  versionPill: {
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    marginTop: 16,
+    marginBottom: 28,
+  },
+  versionPillText: { fontSize: 12, color: colors.textMuted, fontWeight: '600' },
   center: { alignItems: 'center', gap: 12 },
-  statusText: { fontSize: 15, color: colors.text, textAlign: 'center', fontWeight: '600', marginBottom: 16 },
+  card: {
+    width: '100%',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 16,
+    paddingVertical: 28,
+    paddingHorizontal: 20,
+  },
+  iconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  statusText: { fontSize: 15, color: colors.text, textAlign: 'center', fontWeight: '600', marginTop: 12, marginBottom: 16 },
   errorText: { fontSize: 13, color: colors.danger, textAlign: 'center', marginBottom: 16 },
   hint: { fontSize: 12, color: colors.textMuted, textAlign: 'center', marginBottom: 16, paddingHorizontal: 8 },
   button: {
     width: '100%',
+    flexDirection: 'row',
+    gap: 8,
     backgroundColor: colors.primary,
     borderRadius: 8,
     padding: 14,
@@ -185,6 +264,7 @@ const getStyles = (colors) => StyleSheet.create({
   buttonText: { color: colors.background, fontSize: 16, fontWeight: '600' },
   secondaryButton: { minHeight: 44, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16 },
   secondaryButtonText: { color: colors.primary, fontSize: 14, fontWeight: '600' },
+  percentText: { fontSize: 28, fontWeight: '700', color: colors.text, marginBottom: 12 },
   progressTrack: { width: '100%', height: 8, backgroundColor: colors.border, borderRadius: 4, overflow: 'hidden' },
   progressFill: { height: '100%', backgroundColor: colors.primary },
 });

@@ -176,6 +176,9 @@ export const translations = {
     'update.downloadErrorMessage': 'No se pudo descargar la actualización.',
     'update.androidOnly': 'La descarga automática solo está disponible en Android. Puedes descargarla manualmente desde GitHub.',
     'update.viewOnGithub': 'Ver en GitHub',
+    'update.exitConfirmTitle': '¿Salir de todos modos?',
+    'update.exitConfirmMessage': 'La descarga se cancela si sales ahora.',
+    'update.exitConfirmConfirm': 'Salir',
 
     // Sobre la app
     'about.tagline': 'Rumbo proyecta cuánto vas a terminar gastando el mes, desde tu primer gasto registrado.',
@@ -378,6 +381,9 @@ export const translations = {
     'update.downloadErrorMessage': "Couldn't download the update.",
     'update.androidOnly': 'Automatic download is only available on Android. You can download it manually from GitHub.',
     'update.viewOnGithub': 'View on GitHub',
+    'update.exitConfirmTitle': 'Leave anyway?',
+    'update.exitConfirmMessage': 'The download will be canceled if you leave now.',
+    'update.exitConfirmConfirm': 'Leave',
 
     'about.tagline': "Rumbo projects how much you'll end up spending this month, from your very first expense.",
     'about.versionLabel': 'Version {{version}}',
