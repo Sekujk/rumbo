@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Alert, Image } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../config/supabase';
@@ -12,6 +13,9 @@ export default function EditProfileScreen() {
   const { lang, t } = useLanguage();
   const styles = useMemo(() => getStyles(colors), [colors]);
 
+  const [fullName, setFullName] = useState(session?.user?.user_metadata?.full_name || '');
+  const [savingName, setSavingName] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -19,12 +23,68 @@ export default function EditProfileScreen() {
   const [deleting, setDeleting] = useState(false);
 
   const email = session?.user?.email || '';
+  const avatarUrl = session?.user?.user_metadata?.avatar_url || null;
   const memberSince = session?.user?.created_at
     ? new Date(session.user.created_at).toLocaleDateString(lang === 'en' ? 'en-US' : 'es-PE', {
         year: 'numeric',
         month: 'long',
       })
     : null;
+
+  const handlePickAvatar = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert(t('profile.avatarPermissionTitle'), t('profile.avatarPermissionMessage'));
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.6,
+    });
+    if (result.canceled) return;
+
+    setUploadingAvatar(true);
+    try {
+      const response = await fetch(result.assets[0].uri);
+      const arrayBuffer = await response.arrayBuffer();
+      const path = `${session.user.id}/avatar.jpg`;
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(path, arrayBuffer, { contentType: 'image/jpeg', upsert: true });
+      if (uploadError) throw uploadError;
+
+      const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(path);
+      // Cache-bust: la ruta no cambia entre subidas (upsert al mismo path),
+      // así que sin esto el navegador/CDN seguiría sirviendo la foto vieja.
+      const cacheBustedUrl = `${publicUrlData.publicUrl}?t=${Date.now()}`;
+      const { error: updateError } = await supabase.auth.updateUser({ data: { avatar_url: cacheBustedUrl } });
+      if (updateError) throw updateError;
+    } catch (error) {
+      Alert.alert(t('common.error'), error.message || t('profile.avatarErrorMessage'));
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const handleSaveName = async () => {
+    const trimmed = fullName.trim();
+    if (!trimmed) {
+      Alert.alert(t('profile.emptyNameTitle'), t('profile.emptyNameMessage'));
+      return;
+    }
+    setSavingName(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ data: { full_name: trimmed } });
+      if (error) throw error;
+      Alert.alert(t('common.done'), t('profile.nameUpdatedMessage'));
+    } catch (error) {
+      Alert.alert(t('common.error'), error.message || t('profile.nameErrorMessage'));
+    } finally {
+      setSavingName(false);
+    }
+  };
 
   const handleChangePassword = async () => {
     if (!newPassword || newPassword.length < 6) {
@@ -85,6 +145,49 @@ export default function EditProfileScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
+      <TouchableOpacity
+        style={styles.avatarWrap}
+        onPress={handlePickAvatar}
+        disabled={uploadingAvatar}
+        accessibilityRole="button"
+        accessibilityLabel={t('profile.changeAvatar')}
+      >
+        {avatarUrl ? (
+          <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+        ) : (
+          <View style={styles.avatarCircle}>
+            <Text style={styles.avatarInitial}>{(email[0] || '?').toUpperCase()}</Text>
+          </View>
+        )}
+        <View style={styles.avatarBadge}>
+          {uploadingAvatar ? (
+            <ActivityIndicator size="small" color={colors.background} />
+          ) : (
+            <Ionicons name="camera-outline" size={14} color={colors.background} />
+          )}
+        </View>
+      </TouchableOpacity>
+
+      <Text style={styles.sectionTitle}>{t('profile.name')}</Text>
+      <TextInput
+        style={styles.input}
+        placeholder={t('profile.namePlaceholder')}
+        placeholderTextColor={colors.placeholder}
+        value={fullName}
+        onChangeText={setFullName}
+        accessibilityLabel={t('profile.name')}
+      />
+      <TouchableOpacity
+        style={styles.button}
+        onPress={handleSaveName}
+        disabled={savingName}
+        accessibilityRole="button"
+        accessibilityLabel={t('profile.saveName')}
+        accessibilityState={{ disabled: savingName }}
+      >
+        {savingName ? <ActivityIndicator color={colors.background} /> : <Text style={styles.buttonText}>{t('profile.saveName')}</Text>}
+      </TouchableOpacity>
+
       <Text style={styles.sectionTitle}>{t('profile.email')}</Text>
       <Text style={styles.email}>{email}</Text>
       {memberSince && <Text style={styles.memberSince}>{t('profile.memberSince', { date: memberSince })}</Text>}
@@ -158,6 +261,30 @@ export default function EditProfileScreen() {
 
 const getStyles = (colors) => StyleSheet.create({
   container: { padding: 20, backgroundColor: colors.background, flexGrow: 1 },
+  avatarWrap: { alignSelf: 'center', marginTop: 4 },
+  avatarImage: { width: 88, height: 88, borderRadius: 44, backgroundColor: colors.surfaceMuted },
+  avatarCircle: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: colors.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarInitial: { fontSize: 34, fontWeight: '700', color: colors.primary },
+  avatarBadge: {
+    position: 'absolute',
+    right: -2,
+    bottom: -2,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colors.background,
+  },
   email: { fontSize: 16, fontWeight: '600', color: colors.text },
   memberSince: { fontSize: 13, color: colors.textMuted, marginTop: 4 },
   sectionTitle: {

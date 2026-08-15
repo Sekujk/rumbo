@@ -7,6 +7,7 @@ import { getCategoryColor } from '../theme/colors';
 import { getCategoryDisplayName } from '../config/defaultCategories';
 import Mascot from '../components/Mascot';
 import MonthSelector from '../components/MonthSelector';
+import CategoryDonutChart from '../components/CategoryDonutChart';
 
 export default function DashboardScreen() {
   const { colors } = useTheme();
@@ -216,6 +217,7 @@ export default function DashboardScreen() {
 
   const fillWidth = progressAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
   const visibleCategoryRows = isCurrentMonth ? categoryRows.filter((r) => r.spent > 0 || r.budget != null) : categoryRows;
+  const chartRows = visibleCategoryRows.filter((r) => r.spent > 0);
 
   return (
     <ScrollView
@@ -326,7 +328,9 @@ export default function DashboardScreen() {
         {visibleCategoryRows.length === 0 ? (
           <Text style={styles.empty}>{isCurrentMonth ? t('dashboard.emptyCategories') : t('dashboard.pastMonthEmpty')}</Text>
         ) : (
-          visibleCategoryRows.map((row) => {
+          <>
+          {chartRows.length > 1 && <CategoryDonutChart rows={chartRows} total={displaySpent} />}
+          {visibleCategoryRows.map((row) => {
             const cardAnim = getCardAnim(row.categoryId);
 
             if (!isCurrentMonth) {
@@ -433,7 +437,8 @@ export default function DashboardScreen() {
                 )}
               </Animated.View>
             );
-          })
+          })}
+          </>
         )}
       </Animated.View>
     </ScrollView>

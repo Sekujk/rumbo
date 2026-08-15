@@ -1,12 +1,15 @@
 import React, { useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Image, Share } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../theme/ThemeContext';
 import { useLanguage } from '../i18n/LanguageContext';
 
+const RELEASES_PAGE = 'https://github.com/Sekujk/rumbo/releases/latest';
+
 const MENU_ITEMS = [
   { key: 'editProfile', icon: 'person-outline', labelKey: 'profile.editProfile' },
+  { key: 'share', icon: 'share-social-outline', labelKey: 'profile.shareApp' },
   { key: 'settings', icon: 'options-outline', labelKey: 'profile.settings' },
   { key: 'faq', icon: 'help-circle-outline', labelKey: 'profile.faqButton' },
   { key: 'update', icon: 'cloud-download-outline', labelKey: 'profile.update' },
@@ -20,20 +23,47 @@ export default function ProfileScreen({ onNavigate }) {
   const styles = useMemo(() => getStyles(colors), [colors]);
 
   const email = session?.user?.email || '';
+  const fullName = session?.user?.user_metadata?.full_name || '';
+  const avatarUrl = session?.user?.user_metadata?.avatar_url || null;
+
+  const handleShare = async () => {
+    try {
+      await Share.share({
+        message: t('profile.shareMessage', { url: RELEASES_PAGE }),
+        url: RELEASES_PAGE,
+      });
+    } catch (error) {
+      // el usuario cerró el share sheet o no está disponible en esta
+      // plataforma; no hace falta avisar nada
+    }
+  };
+
+  const handlePress = (key) => {
+    if (key === 'share') {
+      handleShare();
+      return;
+    }
+    onNavigate(key);
+  };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.avatarCircle}>
-        <Text style={styles.avatarInitial}>{(email[0] || '?').toUpperCase()}</Text>
-      </View>
-      <Text style={styles.email}>{email}</Text>
+      {avatarUrl ? (
+        <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+      ) : (
+        <View style={styles.avatarCircle}>
+          <Text style={styles.avatarInitial}>{(fullName[0] || email[0] || '?').toUpperCase()}</Text>
+        </View>
+      )}
+      {fullName ? <Text style={styles.name}>{fullName}</Text> : null}
+      <Text style={fullName ? styles.email : styles.emailPrimary}>{email}</Text>
 
       <View style={styles.menu}>
         {MENU_ITEMS.map((item) => (
           <TouchableOpacity
             key={item.key}
             style={styles.listRow}
-            onPress={() => onNavigate(item.key)}
+            onPress={() => handlePress(item.key)}
             accessibilityRole="button"
             accessibilityLabel={t(item.labelKey)}
           >
@@ -69,7 +99,10 @@ const getStyles = (colors) => StyleSheet.create({
     marginTop: 12,
   },
   avatarInitial: { fontSize: 28, fontWeight: '700', color: colors.primary },
-  email: { fontSize: 16, fontWeight: '600', color: colors.text, marginTop: 14 },
+  avatarImage: { width: 72, height: 72, borderRadius: 36, marginTop: 12, backgroundColor: colors.surfaceMuted },
+  name: { fontSize: 17, fontWeight: '700', color: colors.text, marginTop: 14 },
+  emailPrimary: { fontSize: 16, fontWeight: '600', color: colors.text, marginTop: 14 },
+  email: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
   menu: { width: '100%', marginTop: 32 },
   listRow: {
     width: '100%',
