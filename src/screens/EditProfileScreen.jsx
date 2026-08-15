@@ -24,6 +24,8 @@ export default function EditProfileScreen() {
 
   const email = session?.user?.email || '';
   const avatarUrl = session?.user?.user_metadata?.avatar_url || null;
+  const initialName = session?.user?.user_metadata?.full_name || '';
+  const nameDirty = fullName.trim() !== initialName;
   const memberSince = session?.user?.created_at
     ? new Date(session.user.created_at).toLocaleDateString(lang === 'en' ? 'en-US' : 'es-PE', {
         year: 'numeric',
@@ -168,73 +170,79 @@ export default function EditProfileScreen() {
         </View>
       </TouchableOpacity>
 
-      <Text style={styles.sectionTitle}>{t('profile.name')}</Text>
-      <TextInput
-        style={styles.input}
-        placeholder={t('profile.namePlaceholder')}
-        placeholderTextColor={colors.placeholder}
-        value={fullName}
-        onChangeText={setFullName}
-        accessibilityLabel={t('profile.name')}
-      />
-      <TouchableOpacity
-        style={styles.button}
-        onPress={handleSaveName}
-        disabled={savingName}
-        accessibilityRole="button"
-        accessibilityLabel={t('profile.saveName')}
-        accessibilityState={{ disabled: savingName }}
-      >
-        {savingName ? <ActivityIndicator color={colors.background} /> : <Text style={styles.buttonText}>{t('profile.saveName')}</Text>}
-      </TouchableOpacity>
-
-      <Text style={styles.sectionTitle}>{t('profile.email')}</Text>
-      <Text style={styles.email}>{email}</Text>
-      {memberSince && <Text style={styles.memberSince}>{t('profile.memberSince', { date: memberSince })}</Text>}
-
-      <Text style={styles.sectionTitle}>{t('profile.changePassword')}</Text>
-
-      <View style={styles.passwordWrapper}>
+      <View style={styles.nameRow}>
         <TextInput
-          style={[styles.input, styles.passwordInput]}
-          placeholder={t('profile.newPassword')}
+          style={styles.nameInput}
+          placeholder={t('profile.namePlaceholder')}
           placeholderTextColor={colors.placeholder}
-          value={newPassword}
-          onChangeText={setNewPassword}
-          secureTextEntry={!showPassword}
-          accessibilityLabel={t('profile.newPassword')}
+          value={fullName}
+          onChangeText={setFullName}
+          accessibilityLabel={t('profile.name')}
         />
         <TouchableOpacity
-          style={styles.eyeButton}
-          onPress={() => setShowPassword((prev) => !prev)}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          style={[styles.nameSaveButton, !nameDirty && styles.nameSaveButtonDisabled]}
+          onPress={handleSaveName}
+          disabled={!nameDirty || savingName}
           accessibilityRole="button"
-          accessibilityLabel={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
+          accessibilityLabel={t('profile.saveName')}
+          accessibilityState={{ disabled: !nameDirty || savingName }}
         >
-          <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.textMuted} />
+          {savingName ? (
+            <ActivityIndicator size="small" color={colors.background} />
+          ) : (
+            <Ionicons name="checkmark" size={18} color={nameDirty ? colors.background : colors.textFaint} />
+          )}
         </TouchableOpacity>
       </View>
 
-      <TextInput
-        style={styles.input}
-        placeholder={t('profile.confirmPassword')}
-        placeholderTextColor={colors.placeholder}
-        value={confirmPassword}
-        onChangeText={setConfirmPassword}
-        secureTextEntry={!showPassword}
-        accessibilityLabel={t('profile.confirmPassword')}
-      />
+      <Text style={styles.emailCentered}>{email}</Text>
+      {memberSince && <Text style={styles.memberSinceCentered}>{t('profile.memberSince', { date: memberSince })}</Text>}
 
-      <TouchableOpacity
-        style={styles.button}
-        onPress={handleChangePassword}
-        disabled={saving}
-        accessibilityRole="button"
-        accessibilityLabel={t('profile.savePasswordLabel')}
-        accessibilityState={{ disabled: saving }}
-      >
-        {saving ? <ActivityIndicator color={colors.background} /> : <Text style={styles.buttonText}>{t('profile.savePassword')}</Text>}
-      </TouchableOpacity>
+      <Text style={styles.sectionTitle}>{t('profile.changePassword')}</Text>
+
+      <View style={styles.card}>
+        <View style={styles.passwordWrapper}>
+          <TextInput
+            style={[styles.input, styles.passwordInput]}
+            placeholder={t('profile.newPassword')}
+            placeholderTextColor={colors.placeholder}
+            value={newPassword}
+            onChangeText={setNewPassword}
+            secureTextEntry={!showPassword}
+            accessibilityLabel={t('profile.newPassword')}
+          />
+          <TouchableOpacity
+            style={styles.eyeButton}
+            onPress={() => setShowPassword((prev) => !prev)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
+          >
+            <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
+
+        <TextInput
+          style={[styles.input, styles.lastInput]}
+          placeholder={t('profile.confirmPassword')}
+          placeholderTextColor={colors.placeholder}
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+          secureTextEntry={!showPassword}
+          accessibilityLabel={t('profile.confirmPassword')}
+        />
+
+        <TouchableOpacity
+          style={styles.button}
+          onPress={handleChangePassword}
+          disabled={saving}
+          accessibilityRole="button"
+          accessibilityLabel={t('profile.savePasswordLabel')}
+          accessibilityState={{ disabled: saving }}
+        >
+          {saving ? <ActivityIndicator color={colors.background} /> : <Text style={styles.buttonText}>{t('profile.savePassword')}</Text>}
+        </TouchableOpacity>
+      </View>
 
       <Text style={[styles.sectionTitle, styles.dangerTitle]}>{t('profile.dangerZone')}</Text>
 
@@ -261,17 +269,17 @@ export default function EditProfileScreen() {
 
 const getStyles = (colors) => StyleSheet.create({
   container: { padding: 20, backgroundColor: colors.background, flexGrow: 1 },
-  avatarWrap: { alignSelf: 'center', marginTop: 4 },
-  avatarImage: { width: 88, height: 88, borderRadius: 44, backgroundColor: colors.surfaceMuted },
+  avatarWrap: { alignSelf: 'center', marginTop: 8 },
+  avatarImage: { width: 96, height: 96, borderRadius: 48, backgroundColor: colors.surfaceMuted },
   avatarCircle: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
+    width: 96,
+    height: 96,
+    borderRadius: 48,
     backgroundColor: colors.primarySoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarInitial: { fontSize: 34, fontWeight: '700', color: colors.primary },
+  avatarInitial: { fontSize: 36, fontWeight: '700', color: colors.primary },
   avatarBadge: {
     position: 'absolute',
     right: -2,
@@ -285,16 +293,51 @@ const getStyles = (colors) => StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.background,
   },
-  email: { fontSize: 16, fontWeight: '600', color: colors.text },
-  memberSince: { fontSize: 13, color: colors.textMuted, marginTop: 4 },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginTop: 18,
+    alignSelf: 'center',
+  },
+  nameInput: {
+    width: 200,
+    fontSize: 19,
+    fontWeight: '700',
+    color: colors.text,
+    textAlign: 'center',
+    borderBottomWidth: 1.5,
+    borderBottomColor: colors.borderStrong,
+    paddingVertical: 6,
+  },
+  nameSaveButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nameSaveButtonDisabled: { backgroundColor: colors.surfaceMuted },
+  emailCentered: { fontSize: 14, color: colors.textMuted, marginTop: 12, textAlign: 'center' },
+  memberSinceCentered: { fontSize: 12, color: colors.textFaint, marginTop: 2, textAlign: 'center' },
   sectionTitle: {
     fontSize: 13,
     fontWeight: '700',
     color: colors.text,
     textTransform: 'uppercase',
     letterSpacing: 0.4,
-    marginTop: 28,
+    marginTop: 32,
     marginBottom: 12,
+  },
+  card: {
+    width: '100%',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 14,
+    padding: 16,
   },
   passwordWrapper: { width: '100%', justifyContent: 'center' },
   input: {
@@ -307,8 +350,9 @@ const getStyles = (colors) => StyleSheet.create({
     fontSize: 16,
     minHeight: 48,
     color: colors.text,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.background,
   },
+  lastInput: { marginBottom: 0 },
   passwordInput: { paddingRight: 46 },
   eyeButton: {
     position: 'absolute',

@@ -8,6 +8,7 @@ import { getCategoryDisplayName } from '../config/defaultCategories';
 import Mascot from '../components/Mascot';
 import MonthSelector from '../components/MonthSelector';
 import CategoryDonutChart from '../components/CategoryDonutChart';
+import { useEarliestExpenseMonth } from '../hooks/useEarliestExpenseMonth';
 
 export default function DashboardScreen() {
   const { colors } = useTheme();
@@ -19,6 +20,7 @@ export default function DashboardScreen() {
     d.setDate(1);
     return d;
   });
+  const minMonth = useEarliestExpenseMonth();
   const [projection, setProjection] = useState(null);
   const [income, setIncome] = useState(null);
   const [categoryRows, setCategoryRows] = useState([]);
@@ -226,7 +228,7 @@ export default function DashboardScreen() {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
     >
       <Animated.View style={{ opacity: contentOpacity }}>
-        <MonthSelector month={selectedMonth} onChange={setSelectedMonth} />
+        <MonthSelector month={selectedMonth} onChange={setSelectedMonth} minMonth={minMonth} />
 
         {isCurrentMonth ? (
           <>

@@ -5,7 +5,10 @@ import { useTheme } from '../theme/ThemeContext';
 import { useLanguage } from '../i18n/LanguageContext';
 
 // month: Date normalizado al dia 1 del mes seleccionado.
-export default function MonthSelector({ month, onChange }) {
+// minMonth: Date (dia 1) del mes con el gasto mas antiguo, o null si nunca
+// hubo gastos, o undefined mientras se calcula. No tiene sentido dejar
+// navegar a meses de antes de eso, porque ahi no hay nada que mostrar.
+export default function MonthSelector({ month, onChange, minMonth }) {
   const { colors } = useTheme();
   const { lang, t } = useLanguage();
   const styles = useMemo(() => getStyles(colors), [colors]);
@@ -13,9 +16,15 @@ export default function MonthSelector({ month, onChange }) {
   const today = new Date();
   const isCurrentMonth = month.getFullYear() === today.getFullYear() && month.getMonth() === today.getMonth();
 
+  const canGoPrevious =
+    minMonth instanceof Date &&
+    (month.getFullYear() > minMonth.getFullYear() ||
+      (month.getFullYear() === minMonth.getFullYear() && month.getMonth() > minMonth.getMonth()));
+
   const label = month.toLocaleDateString(lang === 'en' ? 'en-US' : 'es-PE', { month: 'long', year: 'numeric' });
 
   const goToPrevious = () => {
+    if (!canGoPrevious) return;
     const next = new Date(month);
     next.setMonth(next.getMonth() - 1);
     onChange(next);
@@ -33,10 +42,12 @@ export default function MonthSelector({ month, onChange }) {
       <TouchableOpacity
         style={styles.arrowButton}
         onPress={goToPrevious}
+        disabled={!canGoPrevious}
         accessibilityRole="button"
         accessibilityLabel={t('dashboard.previousMonth')}
+        accessibilityState={{ disabled: !canGoPrevious }}
       >
-        <Ionicons name="chevron-back" size={20} color={colors.text} />
+        <Ionicons name="chevron-back" size={20} color={canGoPrevious ? colors.text : colors.textFaint} />
       </TouchableOpacity>
 
       <Text style={styles.label}>{label}</Text>

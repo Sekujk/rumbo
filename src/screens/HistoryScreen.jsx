@@ -11,6 +11,7 @@ import { getCategoryColor } from '../theme/colors';
 import { getCategoryDisplayName } from '../config/defaultCategories';
 import Mascot from '../components/Mascot';
 import MonthSelector from '../components/MonthSelector';
+import { useEarliestExpenseMonth } from '../hooks/useEarliestExpenseMonth';
 
 // LayoutAnimation viene desactivado por defecto en Android (sí funciona
 // de fábrica en iOS), hay que habilitarlo una vez para que la fila
@@ -35,6 +36,7 @@ export default function HistoryScreen() {
     d.setDate(1);
     return d;
   });
+  const minMonth = useEarliestExpenseMonth();
 
   const contentOpacity = useRef(new Animated.Value(0)).current;
 
@@ -127,7 +129,7 @@ export default function HistoryScreen() {
   return (
     <Animated.View style={[styles.flex, { opacity: contentOpacity }]}>
       <View style={styles.selectorWrap}>
-        <MonthSelector month={selectedMonth} onChange={setSelectedMonth} />
+        <MonthSelector month={selectedMonth} onChange={setSelectedMonth} minMonth={minMonth} />
       </View>
       {loading ? (
         <View style={styles.center}>

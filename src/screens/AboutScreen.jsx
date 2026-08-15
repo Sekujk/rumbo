@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Linking } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Linking, Share } from 'react-native';
 import Constants from 'expo-constants';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
@@ -7,6 +7,7 @@ import { useLanguage } from '../i18n/LanguageContext';
 import Mascot from '../components/Mascot';
 
 const REPO_URL = 'https://github.com/Sekujk/rumbo';
+const RELEASES_PAGE = 'https://github.com/Sekujk/rumbo/releases/latest';
 
 export default function AboutScreen({ onReplayGuide }) {
   const { colors } = useTheme();
@@ -14,6 +15,18 @@ export default function AboutScreen({ onReplayGuide }) {
   const styles = useMemo(() => getStyles(colors), [colors]);
 
   const version = Constants.expoConfig?.version || '1.0.0';
+
+  const handleShare = async () => {
+    try {
+      await Share.share({
+        message: t('profile.shareMessage', { url: RELEASES_PAGE }),
+        url: RELEASES_PAGE,
+      });
+    } catch (error) {
+      // el usuario cerró el share sheet o no está disponible en esta
+      // plataforma; no hace falta avisar nada
+    }
+  };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -41,6 +54,17 @@ export default function AboutScreen({ onReplayGuide }) {
       >
         <Ionicons name="logo-github" size={20} color={colors.textMuted} />
         <Text style={styles.listRowText}>{t('about.repository')}</Text>
+        <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.listRow, styles.listRowNoBorderTop]}
+        onPress={handleShare}
+        accessibilityRole="button"
+        accessibilityLabel={t('profile.shareApp')}
+      >
+        <Ionicons name="share-social-outline" size={20} color={colors.textMuted} />
+        <Text style={styles.listRowText}>{t('profile.shareApp')}</Text>
         <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
       </TouchableOpacity>
     </ScrollView>

@@ -1,15 +1,12 @@
 import React, { useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Image, Share } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../theme/ThemeContext';
 import { useLanguage } from '../i18n/LanguageContext';
 
-const RELEASES_PAGE = 'https://github.com/Sekujk/rumbo/releases/latest';
-
 const MENU_ITEMS = [
   { key: 'editProfile', icon: 'person-outline', labelKey: 'profile.editProfile' },
-  { key: 'share', icon: 'share-social-outline', labelKey: 'profile.shareApp' },
   { key: 'settings', icon: 'options-outline', labelKey: 'profile.settings' },
   { key: 'faq', icon: 'help-circle-outline', labelKey: 'profile.faqButton' },
   { key: 'update', icon: 'cloud-download-outline', labelKey: 'profile.update' },
@@ -25,26 +22,6 @@ export default function ProfileScreen({ onNavigate }) {
   const email = session?.user?.email || '';
   const fullName = session?.user?.user_metadata?.full_name || '';
   const avatarUrl = session?.user?.user_metadata?.avatar_url || null;
-
-  const handleShare = async () => {
-    try {
-      await Share.share({
-        message: t('profile.shareMessage', { url: RELEASES_PAGE }),
-        url: RELEASES_PAGE,
-      });
-    } catch (error) {
-      // el usuario cerró el share sheet o no está disponible en esta
-      // plataforma; no hace falta avisar nada
-    }
-  };
-
-  const handlePress = (key) => {
-    if (key === 'share') {
-      handleShare();
-      return;
-    }
-    onNavigate(key);
-  };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -63,7 +40,7 @@ export default function ProfileScreen({ onNavigate }) {
           <TouchableOpacity
             key={item.key}
             style={styles.listRow}
-            onPress={() => handlePress(item.key)}
+            onPress={() => onNavigate(item.key)}
             accessibilityRole="button"
             accessibilityLabel={t(item.labelKey)}
           >
