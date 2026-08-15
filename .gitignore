@@ -48,3 +48,7 @@ AGENTS.md
 
 # notas y capturas internas, no se publican en el repositorio
 docs/
+
+# builds descargados localmente (van adjuntos al Release, no al repo)
+*.apk
+*.aab
