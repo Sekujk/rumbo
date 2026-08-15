@@ -32,7 +32,9 @@
         {
           "photosPermission": "Rumbo usa tu galería para que elijas una foto de perfil."
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker",
+      "expo-notifications"
     ],
     "extra": {
       "eas": {
