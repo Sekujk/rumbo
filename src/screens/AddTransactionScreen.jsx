@@ -1,5 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator, Animated } from 'react-native';
+import {
+  View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator, Animated,
+  LayoutAnimation, Platform, UIManager,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../config/supabase';
 import { useAuth } from '../context/AuthContext';
@@ -9,6 +12,10 @@ import { getCategoryColor } from '../theme/colors';
 import { MAX_CATEGORIES, getCategoryDisplayName } from '../config/defaultCategories';
 import Mascot from '../components/Mascot';
 
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
 export default function AddTransactionScreen() {
   const { session } = useAuth();
   const { colors } = useTheme();
@@ -17,6 +24,8 @@ export default function AddTransactionScreen() {
 
   const [type, setType] = useState('expense'); // 'expense' | 'income'
   const [categories, setCategories] = useState([]);
+  const [archivedCategories, setArchivedCategories] = useState([]);
+  const [showArchived, setShowArchived] = useState(false);
   const [categoryId, setCategoryId] = useState(null);
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
@@ -42,12 +51,13 @@ export default function AddTransactionScreen() {
       setLoadingCategories(true);
       const { data, error } = await supabase
         .from('categories')
-        .select('id, name, default_key')
-        .is('archived_at', null)
+        .select('id, name, default_key, archived_at')
         .order('name');
       if (!error && data) {
-        setCategories(data);
-        setCategoryId(data[0]?.id || null);
+        const active = data.filter((c) => !c.archived_at);
+        setCategories(active);
+        setArchivedCategories(data.filter((c) => c.archived_at));
+        setCategoryId(active[0]?.id || null);
       }
       setLoadingCategories(false);
     };
@@ -75,7 +85,7 @@ export default function AddTransactionScreen() {
       const { data, error } = await supabase
         .from('categories')
         .insert({ user_id: session.user.id, name: trimmed })
-        .select('id, name, default_key')
+        .select('id, name, default_key, archived_at')
         .single();
       if (error) throw error;
       setCategories((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
@@ -95,6 +105,58 @@ export default function AddTransactionScreen() {
       return;
     }
     setAddingCategory(true);
+  };
+
+  // Archivar, no borrar: la categoria se queda en la base para que el
+  // historial, la proyeccion por categoria y el promedio de meses
+  // cerrados sigan siendo correctos para lo que ya pasó, solo deja de
+  // poder elegirse para gastos nuevos de aca en adelante.
+  const handleArchiveCategory = async (category) => {
+    const displayName = getCategoryDisplayName(t, category);
+    const { count } = await supabase
+      .from('transactions')
+      .select('id', { count: 'exact', head: true })
+      .eq('category_id', category.id);
+
+    Alert.alert(
+      t('add.archiveCategoryTitle', { name: displayName }),
+      count > 0
+        ? t('add.archiveCategoryMessageWithCount', { name: displayName, count })
+        : t('add.archiveCategoryMessageEmpty', { name: displayName }),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('add.archiveCategoryConfirm'), style: 'destructive', onPress: () => archiveCategory(category) },
+      ]
+    );
+  };
+
+  const archiveCategory = async (category) => {
+    try {
+      await supabase.from('budgets').delete().eq('category_id', category.id);
+      const { error } = await supabase
+        .from('categories')
+        .update({ archived_at: new Date().toISOString() })
+        .eq('id', category.id);
+      if (error) throw error;
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setCategories((prev) => prev.filter((c) => c.id !== category.id));
+      setArchivedCategories((prev) => [...prev, { ...category, archived_at: new Date().toISOString() }]);
+      setCategoryId((prev) => (prev === category.id ? null : prev));
+    } catch (error) {
+      Alert.alert(t('common.error'), error.message || t('add.archiveCategoryErrorMessage'));
+    }
+  };
+
+  const handleRestoreCategory = async (category) => {
+    try {
+      const { error } = await supabase.from('categories').update({ archived_at: null }).eq('id', category.id);
+      if (error) throw error;
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setArchivedCategories((prev) => prev.filter((c) => c.id !== category.id));
+      setCategories((prev) => [...prev, { ...category, archived_at: null }].sort((a, b) => a.name.localeCompare(b.name)));
+    } catch (error) {
+      Alert.alert(t('common.error'), error.message || t('add.restoreCategoryErrorMessage'));
+    }
   };
 
   const playSuccessAnimation = () => {
@@ -205,9 +267,11 @@ export default function AddTransactionScreen() {
                           selected ? { backgroundColor: catColor, borderColor: catColor } : null,
                         ]}
                         onPress={() => handleSelectCategory(cat.id)}
+                        onLongPress={() => handleArchiveCategory(cat)}
                         accessibilityRole="radio"
                         accessibilityState={{ selected }}
                         accessibilityLabel={t('add.categoryLabel', { name: displayName })}
+                        accessibilityHint={t('add.archiveHint')}
                       >
                         {!selected && <View style={[styles.chipDot, { backgroundColor: catColor }]} />}
                         <Text style={[styles.categoryChipText, selected && styles.categoryChipTextActive]}>
@@ -265,6 +329,45 @@ export default function AddTransactionScreen() {
                     <Ionicons name="add" size={18} color={colors.textMuted} />
                   </TouchableOpacity>
                 )}
+              </View>
+            )}
+
+            {!loadingCategories && <Text style={styles.archiveHint}>{t('add.archiveHint')}</Text>}
+
+            {archivedCategories.length > 0 && (
+              <TouchableOpacity
+                style={styles.viewArchivedButton}
+                onPress={() => {
+                  LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                  setShowArchived((prev) => !prev);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={showArchived ? t('add.hideArchived') : t('add.viewArchived', { count: archivedCategories.length })}
+              >
+                <Ionicons name={showArchived ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
+                <Text style={styles.viewArchivedText}>
+                  {showArchived ? t('add.hideArchived') : t('add.viewArchived', { count: archivedCategories.length })}
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {showArchived && (
+              <View style={styles.categoryRow}>
+                {archivedCategories.map((cat) => {
+                  const displayName = getCategoryDisplayName(t, cat);
+                  return (
+                    <TouchableOpacity
+                      key={cat.id}
+                      style={[styles.categoryChip, styles.archivedChip]}
+                      onPress={() => handleRestoreCategory(cat)}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('add.restoreCategory', { name: displayName })}
+                    >
+                      <Ionicons name="refresh-outline" size={14} color={colors.textFaint} />
+                      <Text style={[styles.categoryChipText, styles.archivedChipText]}>{displayName}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             )}
           </>
@@ -388,6 +491,11 @@ const getStyles = (colors) => StyleSheet.create({
     backgroundColor: colors.surface,
   },
   newCategoryIconButton: { width: 40, height: 44, alignItems: 'center', justifyContent: 'center' },
+  archiveHint: { fontSize: 11, color: colors.textFaint, marginTop: 8 },
+  viewArchivedButton: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 36, marginTop: 4 },
+  viewArchivedText: { fontSize: 13, color: colors.textMuted, fontWeight: '600' },
+  archivedChip: { opacity: 0.6, borderStyle: 'dashed' },
+  archivedChipText: { color: colors.textMuted },
   categoryChipText: { color: colors.text, fontSize: 14 },
   categoryChipTextActive: { color: colors.background },
   button: { backgroundColor: colors.primary, borderRadius: 8, padding: 16, minHeight: 52, alignItems: 'center', justifyContent: 'center', marginTop: 32 },

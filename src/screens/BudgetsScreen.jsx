@@ -109,49 +109,6 @@ export default function BudgetsScreen() {
     }
   };
 
-  // Archivar, no borrar: la categoria se queda en la base para que el
-  // historial, la proyeccion por categoria y el promedio de meses
-  // cerrados sigan siendo correctos para lo que ya pasó, solo deja de
-  // poder elegirse en Agregar/Presupuestos de aca en adelante.
-  const handleArchive = async (row) => {
-    const { count } = await supabase
-      .from('transactions')
-      .select('id', { count: 'exact', head: true })
-      .eq('category_id', row.categoryId);
-
-    Alert.alert(
-      t('budgets.archiveTitle', { name: row.name }),
-      count > 0
-        ? t('budgets.archiveMessageWithCount', { name: row.name, count })
-        : t('budgets.archiveMessageEmpty', { name: row.name }),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('budgets.archiveConfirm'),
-          style: 'destructive',
-          onPress: async () => {
-            setSavingId(row.categoryId);
-            try {
-              if (row.budgetId) {
-                await supabase.from('budgets').delete().eq('id', row.budgetId);
-              }
-              const { error } = await supabase
-                .from('categories')
-                .update({ archived_at: new Date().toISOString() })
-                .eq('id', row.categoryId);
-              if (error) throw error;
-              await load();
-            } catch (error) {
-              Alert.alert(t('common.error'), error.message || t('budgets.archiveErrorMessage'));
-            } finally {
-              setSavingId(null);
-            }
-          },
-        },
-      ]
-    );
-  };
-
   if (loading) {
     return (
       <View style={styles.center}>
@@ -170,18 +127,7 @@ export default function BudgetsScreen() {
         ListHeaderComponent={<Text style={styles.intro}>{t('budgets.intro')}</Text>}
         renderItem={({ item }) => (
           <View style={styles.row}>
-            <View style={styles.rowHeader}>
-              <Text style={styles.categoryName}>{item.name}</Text>
-              <TouchableOpacity
-                style={styles.archiveButton}
-                onPress={() => handleArchive(item)}
-                disabled={savingId === item.categoryId}
-                accessibilityRole="button"
-                accessibilityLabel={t('budgets.archiveLabel', { name: item.name })}
-              >
-                <Ionicons name="archive-outline" size={18} color={colors.textMuted} />
-              </TouchableOpacity>
-            </View>
+            <Text style={styles.categoryName}>{item.name}</Text>
             <View style={styles.rowRight}>
               <Text style={styles.prefix}>S/</Text>
               <TextInput
@@ -233,9 +179,7 @@ const getStyles = (colors) => StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  rowHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  categoryName: { fontSize: 15, fontWeight: '600', color: colors.text },
-  archiveButton: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
+  categoryName: { fontSize: 15, fontWeight: '600', color: colors.text, marginBottom: 10 },
   rowRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   prefix: { fontSize: 15, color: colors.textMuted, fontWeight: '600' },
   input: {
