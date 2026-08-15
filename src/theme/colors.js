@@ -28,6 +28,7 @@ export const lightColors = {
   danger: '#b3261e',
   dangerSoft: '#fbe9e7',
   warning: '#b45309',
+  warningSoft: '#fef3e2',
   overlay: 'rgba(0, 0, 0, 0.05)',
   categoryPalette: lightCategoryPalette,
 };
@@ -50,6 +51,7 @@ export const darkColors = {
   danger: '#f87171',
   dangerSoft: '#3a1e1e',
   warning: '#fbbf24',
+  warningSoft: '#3a2a0f',
   overlay: 'rgba(255, 255, 255, 0.06)',
   categoryPalette: darkCategoryPalette,
 };

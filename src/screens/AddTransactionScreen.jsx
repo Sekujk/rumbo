@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator, Animated,
+  View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Animated,
   LayoutAnimation, Platform, UIManager,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,6 +8,7 @@ import { supabase } from '../config/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../theme/ThemeContext';
 import { useLanguage } from '../i18n/LanguageContext';
+import { useAppAlert } from '../context/AppAlertContext';
 import { getCategoryColor } from '../theme/colors';
 import { MAX_CATEGORIES, getCategoryDisplayName } from '../config/defaultCategories';
 import Mascot from '../components/Mascot';
@@ -20,6 +21,7 @@ export default function AddTransactionScreen() {
   const { session } = useAuth();
   const { colors } = useTheme();
   const { t } = useLanguage();
+  const { notify, confirm } = useAppAlert();
   const styles = useMemo(() => getStyles(colors), [colors]);
 
   const [type, setType] = useState('expense'); // 'expense' | 'income'
@@ -77,7 +79,7 @@ export default function AddTransactionScreen() {
     if (!trimmed) return;
     const isDuplicate = categories.some((c) => c.name.toLowerCase() === trimmed.toLowerCase());
     if (isDuplicate) {
-      Alert.alert(t('add.newCategoryDuplicateTitle'), t('add.newCategoryDuplicateMessage'));
+      notify({ title: t('add.newCategoryDuplicateTitle'), message: t('add.newCategoryDuplicateMessage'), variant: 'warning' });
       return;
     }
     setSavingCategory(true);
@@ -93,7 +95,7 @@ export default function AddTransactionScreen() {
       setNewCategoryName('');
       setAddingCategory(false);
     } catch (error) {
-      Alert.alert(t('common.error'), error.message || t('add.newCategorySaveErrorMessage'));
+      notify({ title: t('common.error'), message: error.message || t('add.newCategorySaveErrorMessage'), variant: 'error' });
     } finally {
       setSavingCategory(false);
     }
@@ -101,7 +103,7 @@ export default function AddTransactionScreen() {
 
   const handleOpenAddCategory = () => {
     if (categories.length >= MAX_CATEGORIES) {
-      Alert.alert(t('add.newCategoryLimitTitle'), t('add.newCategoryLimitMessage', { max: MAX_CATEGORIES }));
+      notify({ title: t('add.newCategoryLimitTitle'), message: t('add.newCategoryLimitMessage', { max: MAX_CATEGORIES }), variant: 'warning' });
       return;
     }
     setAddingCategory(true);
@@ -118,16 +120,15 @@ export default function AddTransactionScreen() {
       .select('id', { count: 'exact', head: true })
       .eq('category_id', category.id);
 
-    Alert.alert(
-      t('add.archiveCategoryTitle', { name: displayName }),
-      count > 0
+    confirm({
+      title: t('add.archiveCategoryTitle', { name: displayName }),
+      message: count > 0
         ? t('add.archiveCategoryMessageWithCount', { name: displayName, count })
         : t('add.archiveCategoryMessageEmpty', { name: displayName }),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        { text: t('add.archiveCategoryConfirm'), style: 'destructive', onPress: () => archiveCategory(category) },
-      ]
-    );
+      confirmText: t('add.archiveCategoryConfirm'),
+      destructive: true,
+      onConfirm: () => archiveCategory(category),
+    });
   };
 
   const archiveCategory = async (category) => {
@@ -143,7 +144,7 @@ export default function AddTransactionScreen() {
       setArchivedCategories((prev) => [...prev, { ...category, archived_at: new Date().toISOString() }]);
       setCategoryId((prev) => (prev === category.id ? null : prev));
     } catch (error) {
-      Alert.alert(t('common.error'), error.message || t('add.archiveCategoryErrorMessage'));
+      notify({ title: t('common.error'), message: error.message || t('add.archiveCategoryErrorMessage'), variant: 'error' });
     }
   };
 
@@ -155,7 +156,7 @@ export default function AddTransactionScreen() {
       setArchivedCategories((prev) => prev.filter((c) => c.id !== category.id));
       setCategories((prev) => [...prev, { ...category, archived_at: null }].sort((a, b) => a.name.localeCompare(b.name)));
     } catch (error) {
-      Alert.alert(t('common.error'), error.message || t('add.restoreCategoryErrorMessage'));
+      notify({ title: t('common.error'), message: error.message || t('add.restoreCategoryErrorMessage'), variant: 'error' });
     }
   };
 
@@ -172,11 +173,11 @@ export default function AddTransactionScreen() {
   const handleSave = async () => {
     const parsedAmount = parseFloat(amount.replace(',', '.'));
     if (!parsedAmount || parsedAmount <= 0) {
-      Alert.alert(t('add.invalidAmountTitle'), t('add.invalidAmountMessage'));
+      notify({ title: t('add.invalidAmountTitle'), message: t('add.invalidAmountMessage'), variant: 'warning' });
       return;
     }
     if (type === 'expense' && !categoryId) {
-      Alert.alert(t('add.missingCategoryTitle'), t('add.missingCategoryMessage'));
+      notify({ title: t('add.missingCategoryTitle'), message: t('add.missingCategoryMessage'), variant: 'warning' });
       return;
     }
     setSaving(true);
@@ -202,7 +203,7 @@ export default function AddTransactionScreen() {
       setNote('');
       playSuccessAnimation();
     } catch (error) {
-      Alert.alert(t('common.error'), error.message || t('add.saveErrorMessage'));
+      notify({ title: t('common.error'), message: error.message || t('add.saveErrorMessage'), variant: 'error' });
     } finally {
       setSaving(false);
     }

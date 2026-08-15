@@ -1,12 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Animated, BackHandler, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Animated, BackHandler } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import { LanguageProvider, useLanguage } from './src/i18n/LanguageContext';
+import { AppAlertProvider, useAppAlert } from './src/context/AppAlertContext';
 import { supabase } from './src/config/supabase';
 import { ensureDefaultCategories } from './src/config/defaultCategories';
 import AuthScreen from './src/screens/AuthScreen';
@@ -47,6 +48,7 @@ function MainApp() {
   const { session } = useAuth();
   const { colors } = useTheme();
   const { t } = useLanguage();
+  const { confirm } = useAppAlert();
   const styles = useMemo(() => getStyles(colors), [colors]);
   const [activeTab, setActiveTab] = useState('dashboard');
   // null = tabs normales, 'profile' = Perfil, o una de PROFILE_CHILDREN
@@ -181,15 +183,18 @@ function MainApp() {
         handleBack();
         return true;
       }
-      Alert.alert(t('app.exitConfirmTitle'), t('app.exitConfirmMessage'), [
-        { text: t('common.cancel'), style: 'cancel' },
-        { text: t('app.exitConfirmConfirm'), style: 'destructive', onPress: () => BackHandler.exitApp() },
-      ]);
+      confirm({
+        title: t('app.exitConfirmTitle'),
+        message: t('app.exitConfirmMessage'),
+        confirmText: t('app.exitConfirmConfirm'),
+        destructive: true,
+        onConfirm: () => BackHandler.exitApp(),
+      });
       return true;
     };
     const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
     return () => subscription.remove();
-  }, [overlay, t]);
+  }, [overlay, t, confirm]);
 
   if (!ready) {
     return (
@@ -319,10 +324,12 @@ export default function App() {
     <SafeAreaProvider>
       <ThemeProvider>
         <LanguageProvider>
-          <AuthProvider>
-            <ThemedStatusBar />
-            <Root />
-          </AuthProvider>
+          <AppAlertProvider>
+            <AuthProvider>
+              <ThemedStatusBar />
+              <Root />
+            </AuthProvider>
+          </AppAlertProvider>
         </LanguageProvider>
       </ThemeProvider>
     </SafeAreaProvider>

@@ -1,16 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, ActivityIndicator, Alert, Animated } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, ActivityIndicator, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../config/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../theme/ThemeContext';
 import { useLanguage } from '../i18n/LanguageContext';
+import { useAppAlert } from '../context/AppAlertContext';
 import { getCategoryDisplayName } from '../config/defaultCategories';
 
 export default function BudgetsScreen() {
   const { session } = useAuth();
   const { colors } = useTheme();
   const { t } = useLanguage();
+  const { notify } = useAppAlert();
   const styles = useMemo(() => getStyles(colors), [colors]);
 
   const [rows, setRows] = useState([]);
@@ -71,7 +73,7 @@ export default function BudgetsScreen() {
   const handleSave = async (row) => {
     const parsed = parseFloat(row.value.replace(',', '.'));
     if (!parsed || parsed <= 0) {
-      Alert.alert(t('budgets.invalidAmountTitle'), t('budgets.invalidAmountMessage'));
+      notify({ title: t('budgets.invalidAmountTitle'), message: t('budgets.invalidAmountMessage'), variant: 'warning' });
       return;
     }
     setSavingId(row.categoryId);
@@ -89,7 +91,7 @@ export default function BudgetsScreen() {
       await load();
       playSaveBounce(row.categoryId);
     } catch (error) {
-      Alert.alert(t('common.error'), error.message || t('budgets.saveErrorMessage'));
+      notify({ title: t('common.error'), message: error.message || t('budgets.saveErrorMessage'), variant: 'error' });
     } finally {
       setSavingId(null);
     }
@@ -103,7 +105,7 @@ export default function BudgetsScreen() {
       if (error) throw error;
       await load();
     } catch (error) {
-      Alert.alert(t('common.error'), t('budgets.clearErrorMessage'));
+      notify({ title: t('common.error'), message: t('budgets.clearErrorMessage'), variant: 'error' });
     } finally {
       setSavingId(null);
     }

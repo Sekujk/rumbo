@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Platform, Linking, Animated, BackHandler, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Platform, Linking, Animated, BackHandler } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as IntentLauncher from 'expo-intent-launcher';
 import Constants from 'expo-constants';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { useLanguage } from '../i18n/LanguageContext';
+import { useAppAlert } from '../context/AppAlertContext';
 import Mascot from '../components/Mascot';
 
 const RELEASES_API = 'https://api.github.com/repos/Sekujk/rumbo/releases/latest';
@@ -28,6 +29,7 @@ function isNewerVersion(remote, local) {
 export default function UpdateScreen({ onExit }) {
   const { colors } = useTheme();
   const { t } = useLanguage();
+  const { confirm } = useAppAlert();
   const styles = useMemo(() => getStyles(colors), [colors]);
 
   const currentVersion = Constants.expoConfig?.version || '1.0.0';
@@ -85,14 +87,13 @@ export default function UpdateScreen({ onExit }) {
   useEffect(() => {
     const onBackPress = () => {
       if (status === 'downloading') {
-        Alert.alert(
-          t('update.exitConfirmTitle'),
-          t('update.exitConfirmMessage'),
-          [
-            { text: t('common.cancel'), style: 'cancel' },
-            { text: t('update.exitConfirmConfirm'), style: 'destructive', onPress: onExit },
-          ]
-        );
+        confirm({
+          title: t('update.exitConfirmTitle'),
+          message: t('update.exitConfirmMessage'),
+          confirmText: t('update.exitConfirmConfirm'),
+          destructive: true,
+          onConfirm: onExit,
+        });
       } else {
         onExit?.();
       }
@@ -100,7 +101,7 @@ export default function UpdateScreen({ onExit }) {
     };
     const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
     return () => subscription.remove();
-  }, [status, onExit, t]);
+  }, [status, onExit, t, confirm]);
 
   const handleDownloadAndInstall = async () => {
     if (!latest?.apkUrl) return;

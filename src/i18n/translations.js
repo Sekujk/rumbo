@@ -44,6 +44,7 @@ export const translations = {
     'common.delete': 'Eliminar',
     'common.save': 'Guardar',
     'common.done': 'Listo',
+    'common.ok': 'Entendido',
 
     // Dashboard
     'dashboard.loading': 'Cargando tu resumen',
@@ -302,6 +303,7 @@ export const translations = {
     'common.delete': 'Delete',
     'common.save': 'Save',
     'common.done': 'Done',
+    'common.ok': 'Got it',
 
     'dashboard.loading': 'Loading your overview',
     'dashboard.previousMonth': 'Previous month',

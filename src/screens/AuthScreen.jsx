@@ -1,14 +1,16 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Animated } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../theme/ThemeContext';
 import { useLanguage } from '../i18n/LanguageContext';
+import { useAppAlert } from '../context/AppAlertContext';
 
 export default function AuthScreen() {
   const { signIn, signUp } = useAuth();
   const { colors } = useTheme();
   const { t } = useLanguage();
+  const { notify } = useAppAlert();
   const styles = useMemo(() => getStyles(colors), [colors]);
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
@@ -43,7 +45,7 @@ export default function AuthScreen() {
 
   const handleSubmit = async () => {
     if (!email || !password) {
-      Alert.alert(t('auth.missingFieldsTitle'), t('auth.missingFieldsMessage'));
+      notify({ title: t('auth.missingFieldsTitle'), message: t('auth.missingFieldsMessage'), variant: 'warning' });
       return;
     }
     setLoading(true);
@@ -51,7 +53,7 @@ export default function AuthScreen() {
       if (isSignUp) {
         const { requiresEmailConfirmation } = await signUp(email, password);
         if (requiresEmailConfirmation) {
-          Alert.alert(t('auth.accountCreatedTitle'), t('auth.accountCreatedMessage'));
+          notify({ title: t('auth.accountCreatedTitle'), message: t('auth.accountCreatedMessage'), variant: 'success' });
         }
         // Si no requiere confirmación, la sesión ya quedó activa y
         // AuthContext te lleva directo al dashboard sin alertas de más.
@@ -59,7 +61,7 @@ export default function AuthScreen() {
         await signIn(email, password);
       }
     } catch (error) {
-      Alert.alert(t('common.error'), error.message || t('auth.genericErrorMessage'));
+      notify({ title: t('common.error'), message: error.message || t('auth.genericErrorMessage'), variant: 'error' });
     } finally {
       setLoading(false);
     }

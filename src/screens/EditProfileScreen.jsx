@@ -1,16 +1,18 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Alert, Image } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../config/supabase';
 import { useTheme } from '../theme/ThemeContext';
 import { useLanguage } from '../i18n/LanguageContext';
+import { useAppAlert } from '../context/AppAlertContext';
 
 export default function EditProfileScreen() {
   const { session, signOut } = useAuth();
   const { colors } = useTheme();
   const { lang, t } = useLanguage();
+  const { notify, confirm } = useAppAlert();
   const styles = useMemo(() => getStyles(colors), [colors]);
 
   const [fullName, setFullName] = useState(session?.user?.user_metadata?.full_name || '');
@@ -36,7 +38,7 @@ export default function EditProfileScreen() {
   const handlePickAvatar = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert(t('profile.avatarPermissionTitle'), t('profile.avatarPermissionMessage'));
+      notify({ title: t('profile.avatarPermissionTitle'), message: t('profile.avatarPermissionMessage'), variant: 'warning' });
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -64,7 +66,7 @@ export default function EditProfileScreen() {
       const { error: updateError } = await supabase.auth.updateUser({ data: { avatar_url: cacheBustedUrl } });
       if (updateError) throw updateError;
     } catch (error) {
-      Alert.alert(t('common.error'), error.message || t('profile.avatarErrorMessage'));
+      notify({ title: t('common.error'), message: error.message || t('profile.avatarErrorMessage'), variant: 'error' });
     } finally {
       setUploadingAvatar(false);
     }
@@ -73,16 +75,16 @@ export default function EditProfileScreen() {
   const handleSaveName = async () => {
     const trimmed = fullName.trim();
     if (!trimmed) {
-      Alert.alert(t('profile.emptyNameTitle'), t('profile.emptyNameMessage'));
+      notify({ title: t('profile.emptyNameTitle'), message: t('profile.emptyNameMessage'), variant: 'warning' });
       return;
     }
     setSavingName(true);
     try {
       const { error } = await supabase.auth.updateUser({ data: { full_name: trimmed } });
       if (error) throw error;
-      Alert.alert(t('common.done'), t('profile.nameUpdatedMessage'));
+      notify({ title: t('common.done'), message: t('profile.nameUpdatedMessage'), variant: 'success' });
     } catch (error) {
-      Alert.alert(t('common.error'), error.message || t('profile.nameErrorMessage'));
+      notify({ title: t('common.error'), message: error.message || t('profile.nameErrorMessage'), variant: 'error' });
     } finally {
       setSavingName(false);
     }
@@ -90,11 +92,11 @@ export default function EditProfileScreen() {
 
   const handleChangePassword = async () => {
     if (!newPassword || newPassword.length < 6) {
-      Alert.alert(t('profile.shortPasswordTitle'), t('profile.shortPasswordMessage'));
+      notify({ title: t('profile.shortPasswordTitle'), message: t('profile.shortPasswordMessage'), variant: 'warning' });
       return;
     }
     if (newPassword !== confirmPassword) {
-      Alert.alert(t('profile.mismatchTitle'), t('profile.mismatchMessage'));
+      notify({ title: t('profile.mismatchTitle'), message: t('profile.mismatchMessage'), variant: 'warning' });
       return;
     }
     setSaving(true);
@@ -103,46 +105,41 @@ export default function EditProfileScreen() {
       if (error) throw error;
       setNewPassword('');
       setConfirmPassword('');
-      Alert.alert(t('common.done'), t('profile.passwordUpdatedMessage'));
+      notify({ title: t('common.done'), message: t('profile.passwordUpdatedMessage'), variant: 'success' });
     } catch (error) {
-      Alert.alert(t('common.error'), error.message || t('profile.passwordErrorMessage'));
+      notify({ title: t('common.error'), message: error.message || t('profile.passwordErrorMessage'), variant: 'error' });
     } finally {
       setSaving(false);
     }
   };
 
   const handleDeleteAccount = () => {
-    Alert.alert(
-      t('profile.deleteAccountTitle'),
-      t('profile.deleteAccountMessage'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('profile.deleteAccount'),
-          style: 'destructive',
-          onPress: async () => {
-            setDeleting(true);
-            try {
-              const { error } = await supabase.rpc('delete_user');
-              if (error) throw error;
-            } catch (error) {
-              Alert.alert(t('common.error'), error.message || t('profile.deleteAccountErrorMessage'));
-              setDeleting(false);
-              return;
-            }
-            // La cuenta ya no existe en el servidor en este punto: se
-            // ignora cualquier error de signOut() al invalidar la
-            // sesión remota, porque el objetivo real (salir localmente)
-            // igual se cumple.
-            try {
-              await signOut();
-            } catch (error) {
-              // sin acción: ya se logró lo que importa
-            }
-          },
-        },
-      ]
-    );
+    confirm({
+      title: t('profile.deleteAccountTitle'),
+      message: t('profile.deleteAccountMessage'),
+      confirmText: t('profile.deleteAccount'),
+      destructive: true,
+      onConfirm: async () => {
+        setDeleting(true);
+        try {
+          const { error } = await supabase.rpc('delete_user');
+          if (error) throw error;
+        } catch (error) {
+          notify({ title: t('common.error'), message: error.message || t('profile.deleteAccountErrorMessage'), variant: 'error' });
+          setDeleting(false);
+          return;
+        }
+        // La cuenta ya no existe en el servidor en este punto: se
+        // ignora cualquier error de signOut() al invalidar la
+        // sesión remota, porque el objetivo real (salir localmente)
+        // igual se cumple.
+        try {
+          await signOut();
+        } catch (error) {
+          // sin acción: ya se logró lo que importa
+        }
+      },
+    });
   };
 
   return (

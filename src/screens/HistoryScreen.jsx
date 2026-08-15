@@ -1,12 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, SectionList, ActivityIndicator, TouchableOpacity, Alert,
+  View, Text, StyleSheet, SectionList, ActivityIndicator, TouchableOpacity,
   RefreshControl, Animated, LayoutAnimation, Platform, UIManager,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../config/supabase';
 import { useTheme } from '../theme/ThemeContext';
 import { useLanguage } from '../i18n/LanguageContext';
+import { useAppAlert } from '../context/AppAlertContext';
 import { getCategoryColor } from '../theme/colors';
 import { getCategoryDisplayName } from '../config/defaultCategories';
 import Mascot from '../components/Mascot';
@@ -26,6 +27,7 @@ const yesterdayStr = () => new Date(Date.now() - 86400000).toISOString().slice(0
 export default function HistoryScreen() {
   const { colors } = useTheme();
   const { t, lang } = useLanguage();
+  const { confirm, notify } = useAppAlert();
   const styles = useMemo(() => getStyles(colors), [colors]);
 
   const [transactions, setTransactions] = useState([]);
@@ -104,26 +106,21 @@ export default function HistoryScreen() {
 
   const handleDelete = (item) => {
     const categoryName = item.categories ? getCategoryDisplayName(t, item.categories) : t('history.noCategory');
-    Alert.alert(
-      t('history.deleteTitle'),
-      t('history.deleteMessage', { category: categoryName, amount: Number(item.amount).toFixed(2) }),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('common.delete'),
-          style: 'destructive',
-          onPress: async () => {
-            const { error } = await supabase.from('transactions').delete().eq('id', item.id);
-            if (error) {
-              Alert.alert(t('common.error'), t('history.deleteErrorMessage'));
-              return;
-            }
-            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-            setTransactions((prev) => prev.filter((tx) => tx.id !== item.id));
-          },
-        },
-      ]
-    );
+    confirm({
+      title: t('history.deleteTitle'),
+      message: t('history.deleteMessage', { category: categoryName, amount: Number(item.amount).toFixed(2) }),
+      confirmText: t('common.delete'),
+      destructive: true,
+      onConfirm: async () => {
+        const { error } = await supabase.from('transactions').delete().eq('id', item.id);
+        if (error) {
+          notify({ title: t('common.error'), message: t('history.deleteErrorMessage'), variant: 'error' });
+          return;
+        }
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        setTransactions((prev) => prev.filter((tx) => tx.id !== item.id));
+      },
+    });
   };
 
   return (
