@@ -4,10 +4,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { useLanguage } from '../i18n/LanguageContext';
 
-// month: Date normalizado al dia 1 del mes seleccionado.
-// minMonth: Date (dia 1) del mes con el gasto mas antiguo, o null si nunca
-// hubo gastos, o undefined mientras se calcula. No tiene sentido dejar
-// navegar a meses de antes de eso, porque ahi no hay nada que mostrar.
 export default function MonthSelector({ month, onChange, minMonth }) {
   const { colors } = useTheme();
   const { lang, t } = useLanguage();

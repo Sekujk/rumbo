@@ -14,9 +14,6 @@ import Mascot from '../components/Mascot';
 import MonthSelector from '../components/MonthSelector';
 import { useEarliestExpenseMonth } from '../hooks/useEarliestExpenseMonth';
 
-// LayoutAnimation viene desactivado por defecto en Android (sí funciona
-// de fábrica en iOS), hay que habilitarlo una vez para que la fila
-// eliminada se achique/desvanezca en vez de desaparecer de golpe.
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
@@ -81,9 +78,6 @@ export default function HistoryScreen() {
     setRefreshing(false);
   }, [load]);
 
-  // Agrupar en secciones por día: una lista plana de 30-40 gastos del mes
-  // se vuelve ilegible; agrupadas por fecha (con el total de cada día) se
-  // puede escanear de un vistazo, como cualquier app de banco.
   const sections = useMemo(() => {
     const groups = new Map();
     transactions.forEach((item) => {
@@ -224,7 +218,5 @@ const getStyles = (colors) => StyleSheet.create({
   category: { fontSize: 15, fontWeight: '600', color: colors.text },
   note: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
   amount: { fontSize: 16, fontWeight: '700', color: colors.text, marginRight: 12 },
-  // 44x44 explícito: el ícono mide 20px, pero el área táctil real cumple
-  // el mínimo de Apple HIG (44pt) / Material (48dp) gracias al padding.
   deleteButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
 });

@@ -4,9 +4,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { useLanguage } from '../i18n/LanguageContext';
 
-// state: null (oculto) o
-//   { kind: 'notify', title, message, variant, buttonText }
-//   { kind: 'confirm', title, message, confirmText, cancelText, destructive, onConfirm }
 export default function AppAlertModal({ state, onClose }) {
   const { colors } = useTheme();
   const { t } = useLanguage();

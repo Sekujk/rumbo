@@ -23,8 +23,6 @@ import AboutScreen from './src/screens/AboutScreen';
 import FAQScreen from './src/screens/FAQScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 
-// Pantallas que se abren desde Perfil: "Volver" desde cualquiera de
-// estas lleva de regreso a Perfil, no a las tabs.
 const PROFILE_CHILDREN = ['faq', 'editProfile', 'settings', 'update', 'about'];
 const OVERLAY_TITLE_KEYS = {
   profile: 'header.profile',
@@ -51,20 +49,11 @@ function MainApp() {
   const { confirm } = useAppAlert();
   const styles = useMemo(() => getStyles(colors), [colors]);
   const [activeTab, setActiveTab] = useState('dashboard');
-  // null = tabs normales, 'profile' = Perfil, o una de PROFILE_CHILDREN
-  // (abierta desde dentro de Perfil): una mini pila de navegación de 2
-  // niveles, sin librería.
   const [overlay, setOverlay] = useState(null);
   const [ready, setReady] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  // Se pone en true recién cuando se resolvió si hay que mostrar la guía
-  // o no: evita que la animación de entrada del contenido principal
-  // arranque y se corte a medio camino si la guía se activa un instante
-  // después (ver el efecto de mountOpacity/mountScale más abajo).
   const [onboardingChecked, setOnboardingChecked] = useState(false);
 
-  // Entrada de toda la pantalla al terminar de loguearse: antes pasaba
-  // de golpe del login al dashboard sin transición.
   const mountOpacity = useRef(new Animated.Value(0)).current;
   const mountScale = useRef(new Animated.Value(0.98)).current;
 
@@ -72,8 +61,6 @@ function MainApp() {
   const contentTranslateX = useRef(new Animated.Value(0)).current;
   const headerOpacity = useRef(new Animated.Value(1)).current;
 
-  // Una escala animada por pestaña (se crea una sola vez, no en cada
-  // render), para que el "rebote" al tocar no se reinicie de golpe.
   const tabScales = useRef(TABS.reduce((acc, tab) => {
     acc[tab.id] = new Animated.Value(1);
     return acc;
@@ -85,11 +72,6 @@ function MainApp() {
       .finally(() => setReady(true));
   }, [session.user.id]);
 
-  // Espera a que se sepa si hay que mostrar la guía antes de animar: si
-  // arrancara apenas "ready" es true, un usuario nuevo la cortaría a medio
-  // camino en cuanto se active showOnboarding un instante después, y con
-  // useNativeDriver el valor no vuelve a sincronizarse con JS, queda
-  // pegado cerca de 0 (pantalla en blanco al volver de la guía).
   useEffect(() => {
     if (!ready || !onboardingChecked || showOnboarding) return;
     mountOpacity.setValue(0);
@@ -100,8 +82,6 @@ function MainApp() {
     ]).start();
   }, [ready, onboardingChecked, showOnboarding]);
 
-  // La guía se muestra sola la primera vez que alguien entra (nunca vio
-  // la bandera en AsyncStorage); después, solo si la pide desde Perfil.
   useEffect(() => {
     if (!ready) return;
     AsyncStorage.getItem(ONBOARDING_KEY)
@@ -123,9 +103,6 @@ function MainApp() {
     setShowOnboarding(true);
   };
 
-  // Mismo lenguaje de movimiento para cambiar de pestaña, abrir el perfil
-  // o volver de él: una sola animación de "ventana que se desliza" con
-  // dirección, reusada en los tres casos.
   const animateTransition = (direction) => {
     contentOpacity.setValue(0);
     contentTranslateX.setValue(direction * 20);
@@ -141,9 +118,6 @@ function MainApp() {
     if (id === activeTab && !overlay) return;
     const oldIndex = TABS.findIndex((t) => t.id === activeTab);
     const newIndex = TABS.findIndex((t) => t.id === id);
-    // Positivo si vas hacia una pestaña más a la derecha: el contenido
-    // entra desde ese lado, como una ventana que se desliza, no solo un
-    // fundido plano.
     const direction = overlay ? -1 : newIndex > oldIndex ? 1 : -1;
 
     Animated.sequence([
@@ -171,12 +145,6 @@ function MainApp() {
     setOverlay(PROFILE_CHILDREN.includes(overlay) ? 'profile' : null);
   };
 
-  // El boton fisico de atras de Android no tenia ningun manejo propio en
-  // toda la app (solo dentro de Actualizaciones, ver UpdateScreen): por
-  // defecto Android cierra la app entera apenas no hay nada que lo
-  // intercepte. Con overlay abierto, se comporta como la flecha del
-  // header (vuelve un nivel). En las tabs (overlay null, no hay "atras"
-  // real a donde ir dentro de la app), se confirma antes de salir.
   useEffect(() => {
     const onBackPress = () => {
       if (overlay) {
@@ -357,12 +325,7 @@ const getStyles = (colors) => StyleSheet.create({
     borderTopColor: colors.border,
     backgroundColor: colors.background,
   },
-  // minHeight 56 asegura que todo el botón (ícono + texto) supere el mínimo
-  // táctil de 48dp/44pt, no solo el ícono.
   tabButton: { flex: 1, minHeight: 56, paddingVertical: 10, alignItems: 'center', justifyContent: 'center', gap: 3 },
-  // El activo no se distingue solo por color (evita depender del color para
-  // comunicar estado): también cambia el ícono a su versión rellena y suma
-  // un fondo sutil.
   tabButtonActive: { backgroundColor: colors.primarySoft },
   tabLabel: { fontSize: 12, color: colors.textMuted, fontWeight: '600' },
   tabLabelActive: { color: colors.primary },

@@ -9,16 +9,8 @@ const SIZE = 168;
 const STROKE = 22;
 const RADIUS = (SIZE - STROKE) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
-// Pequeño espacio entre segmentos (en vez de que se toquen borde con
-// borde): con puntas redondeadas se lee como una dona "seccionada", no
-// como un solo anillo pintado a franjas.
 const GAP_DEGREES = 3;
 
-// Dona armada con círculos SVG apilados (sin librería de gráficos): cada
-// segmento es un círculo con strokeDasharray = [arco visible, resto], y
-// strokeDashoffset lo corre hasta donde terminó el segmento anterior.
-// rotation=-90 hace que el primer segmento arranque arriba (12 en punto)
-// en vez del default de SVG (3 en punto).
 export default function CategoryDonutChart({ rows, total }) {
   const { colors } = useTheme();
   const { t } = useLanguage();

@@ -46,10 +46,6 @@ export const LanguageProvider = ({ children }) => {
     }
   };
 
-  // Interpolación simple {{param}}: alcanza para el tamaño de esta app,
-  // no hace falta una librería de i18n con pluralización automática (la
-  // decisión singular/plural la toma quien llama a t(), eligiendo la
-  // clave correcta).
   const t = (key, params) => {
     const dict = translations[lang] || translations[DEFAULT_LANGUAGE];
     const template = dict[key] ?? translations[DEFAULT_LANGUAGE][key] ?? key;

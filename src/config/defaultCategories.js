@@ -21,7 +21,5 @@ export const ensureDefaultCategories = async (supabase, userId) => {
   if (insertError) throw insertError;
 };
 
-// Las categorias de fabrica tienen default_key y se traducen; las que
-// crea el usuario no tienen key y se muestran tal cual las escribio.
 export const getCategoryDisplayName = (t, category) =>
   category?.default_key ? t(`category.${category.default_key}`) : category?.name;

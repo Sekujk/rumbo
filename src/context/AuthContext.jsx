@@ -31,8 +31,6 @@ export const AuthProvider = ({ children }) => {
   const signUp = async (email, password) => {
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) throw error;
-    // Sin verificación por email, signUp ya entrega sesión activa; con
-    // verificación activada, session viene null hasta que confirme el correo.
     return { requiresEmailConfirmation: !data.session };
   };
 

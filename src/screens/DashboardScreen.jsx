@@ -23,9 +23,6 @@ export default function DashboardScreen() {
     return d;
   });
   const minMonth = useEarliestExpenseMonth();
-  // 'list' = tarjetas por categoría (como era antes del gráfico), 'chart'
-  // = solo la dona. Antes convivían las dos siempre, lo que obligaba a
-  // bajar para llegar a la dona y se veía cargado; ahora es exclusivo.
   const [viewMode, setViewMode] = useState('list');
   const [projection, setProjection] = useState(null);
   const [income, setIncome] = useState(null);
@@ -42,12 +39,6 @@ export default function DashboardScreen() {
     return selectedMonth.getFullYear() === today.getFullYear() && selectedMonth.getMonth() === today.getMonth();
   }, [selectedMonth]);
 
-  // Entrada escalonada de las tarjetas de categoría: con muchas
-  // categorías activas, que aparezcan todas de golpe se siente pesado;
-  // una detrás de otra guía el ojo mejor. Un Animated.Value por
-  // categoría (creado una sola vez, como los chips de Agregar) y una
-  // bandera para que solo se anime la primera vez que cargan, no en
-  // cada pull-to-refresh.
   const cardAnims = useRef({}).current;
   const getCardAnim = (id) => {
     if (!cardAnims[id]) cardAnims[id] = new Animated.Value(0);
@@ -55,10 +46,6 @@ export default function DashboardScreen() {
   };
   const hasAnimatedCards = useRef(false);
 
-  // El mes en curso usa las vistas de proyección (run-rate, rango,
-  // outliers). Un mes ya cerrado no tiene nada que proyectar: se trae
-  // directo de transactions/income y se suma tal cual, sin el
-  // aparataje de proyección.
   const loadCurrentMonth = useCallback(async () => {
     const [
       { data: proj, error: projErr },
@@ -174,26 +161,16 @@ export default function DashboardScreen() {
   const daysElapsed = projection?.days_elapsed ?? new Date().getDate();
   const daysInMonth = projection?.days_in_month ?? 30;
   const daysTracked = projection?.days_tracked ?? 0;
-  // Con 1-2 días de datos reales, "gastado ÷ días × días del mes" es más
-  // ruido que señal: se avisa en vez de mostrar el número como si fuera
-  // confiable desde el primer registro.
   const lowConfidence = daysTracked > 0 && daysTracked < 3;
-  // El rango solo es informativo si tiene ancho real: con pocos gastos
-  // la desviación estándar no se puede calcular y el rango colapsa al
-  // mismo número que la proyección, no hace falta mostrarlo dos veces.
   const hasRange = projectedHigh - projectedLow > 1;
   const progress = Math.min(daysElapsed / daysInMonth, 1);
   const incomeSoFar = income?.income_so_far ?? 0;
   const balance = incomeSoFar - spent;
 
-  // Valores unificados que usa la seccion "Ingresos vs. gastos", igual
-  // para mes actual (parcial) o mes pasado (cerrado, ya no cambia).
   const displaySpent = isCurrentMonth ? spent : pastTotals.spent;
   const displayIncome = isCurrentMonth ? incomeSoFar : pastTotals.income;
   const displayBalance = displayIncome - displaySpent;
 
-  // Para las barras comparativas del modo gráfico: la más larga de las dos
-  // llena el 100% del ancho, la otra queda proporcional a esa.
   const compareMax = Math.max(displayIncome, displaySpent, 1);
   const incomeBarPct = (displayIncome / compareMax) * 100;
   const spentBarPct = (displaySpent / compareMax) * 100;
@@ -202,8 +179,6 @@ export default function DashboardScreen() {
     if (loading) return;
     Animated.timing(contentOpacity, { toValue: 1, duration: 320, useNativeDriver: true }).start();
     if (isCurrentMonth) {
-      // El ancho de una barra no se puede animar con el driver nativo, así
-      // que esta va en el hilo de JS: aceptable para una animación única.
       Animated.timing(progressAnim, { toValue: progress, duration: 700, useNativeDriver: false }).start();
     }
   }, [loading, progress, isCurrentMonth]);

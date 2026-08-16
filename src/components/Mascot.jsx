@@ -1,10 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet } from 'react-native';
 
-// "Sol": la mascota de Rumbo. Nombre con doble sentido a propósito, el
-// Sol es la moneda de Perú y también el astro. Sin assets de imagen (este
-// entorno no genera ilustraciones): un emoji con un rebote suave y
-// continuo es suficiente para darle personalidad sin quedar forzado.
 export default function Mascot({ size = 48, style, animated = true }) {
   const bounce = useRef(new Animated.Value(0)).current;
 

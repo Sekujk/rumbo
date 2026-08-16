@@ -21,8 +21,6 @@ export default function BudgetsScreen() {
 
   const contentOpacity = useRef(new Animated.Value(0)).current;
 
-  // Rebote del check al guardar: antes no había ninguna confirmación
-  // visual de que el presupuesto se guardó, más allá del spinner breve.
   const saveAnims = useRef({}).current;
   const getSaveAnim = (id) => {
     if (!saveAnims[id]) saveAnims[id] = new Animated.Value(1);

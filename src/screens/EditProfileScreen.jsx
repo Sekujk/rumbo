@@ -60,8 +60,6 @@ export default function EditProfileScreen() {
       if (uploadError) throw uploadError;
 
       const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(path);
-      // Cache-bust: la ruta no cambia entre subidas (upsert al mismo path),
-      // así que sin esto el navegador/CDN seguiría sirviendo la foto vieja.
       const cacheBustedUrl = `${publicUrlData.publicUrl}?t=${Date.now()}`;
       const { error: updateError } = await supabase.auth.updateUser({ data: { avatar_url: cacheBustedUrl } });
       if (updateError) throw updateError;
@@ -129,15 +127,9 @@ export default function EditProfileScreen() {
           setDeleting(false);
           return;
         }
-        // La cuenta ya no existe en el servidor en este punto: se
-        // ignora cualquier error de signOut() al invalidar la
-        // sesión remota, porque el objetivo real (salir localmente)
-        // igual se cumple.
         try {
           await signOut();
-        } catch (error) {
-          // sin acción: ya se logró lo que importa
-        }
+        } catch (error) {}
       },
     });
   };

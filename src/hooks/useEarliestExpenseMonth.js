@@ -1,9 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../config/supabase';
 
-// Mes del gasto mas antiguo del usuario: undefined mientras carga, null si
-// nunca registro ningun gasto. Sirve de tope para el selector de mes, para
-// no dejar navegar hacia atras a meses que nunca tuvieron datos.
 export function useEarliestExpenseMonth() {
   const [minMonth, setMinMonth] = useState(undefined);
 

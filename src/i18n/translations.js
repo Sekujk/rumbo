@@ -1,13 +1,5 @@
-// Diccionario es/en. Claves con namespace por pantalla para no chocar
-// nombres. Los placeholders van entre {{llaves}} y se reemplazan en
-// LanguageContext#t, intencionalmente simple (solo substitución de
-// texto), no hace falta una librería de i18n para el tamaño de esta app.
-// La gramática de singular/plural la decide quien llama a t() eligiendo
-// la clave correcta (ver ejemplos de uso con count === 1), no el motor.
-
 export const translations = {
   es: {
-    // Tabs / header
     'tab.dashboard': 'Resumen',
     'tab.add': 'Agregar',
     'tab.history': 'Historial',
@@ -19,7 +11,6 @@ export const translations = {
     'app.exitConfirmMessage': 'Vas a cerrar la app.',
     'app.exitConfirmConfirm': 'Salir',
 
-    // Auth
     'auth.signInSubtitle': 'Ingresa a tu cuenta',
     'auth.signUpSubtitle': 'Crea tu cuenta',
     'auth.email': 'Email',
@@ -38,7 +29,6 @@ export const translations = {
     'auth.accountCreatedMessage': 'Revisa tu email para confirmar la cuenta.',
     'auth.genericErrorMessage': 'No se pudo completar la acción',
 
-    // Común
     'common.error': 'Error',
     'common.cancel': 'Cancelar',
     'common.delete': 'Eliminar',
@@ -46,7 +36,6 @@ export const translations = {
     'common.done': 'Listo',
     'common.ok': 'Entendido',
 
-    // Dashboard
     'dashboard.loading': 'Cargando tu resumen',
     'dashboard.previousMonth': 'Mes anterior',
     'dashboard.nextMonth': 'Mes siguiente',
@@ -89,7 +78,6 @@ export const translations = {
     'dashboard.vsAvgDownMany': '▼ {{percent}}% menos que tu promedio (S/ {{avg}}/mes, {{months}} meses)',
     'dashboard.noHistory': 'Sin historial todavía para comparar',
 
-    // Agregar
     'add.expense': 'Gasto',
     'add.income': 'Ingreso',
     'add.registerExpense': 'Registrar gasto',
@@ -135,14 +123,12 @@ export const translations = {
     'add.restoreCategory': 'Restaurar {{name}}',
     'add.restoreCategoryErrorMessage': 'No se pudo restaurar la categoría',
 
-    // Categorías de fábrica
     'category.food': 'Comida',
     'category.transport': 'Transporte',
     'category.leisure': 'Ocio',
     'category.health': 'Salud',
     'category.other': 'Otros',
 
-    // Historial
     'history.loading': 'Cargando historial',
     'history.empty': 'Todavía no registraste gastos este mes.',
     'history.deleteLabel': 'Eliminar gasto de {{category}}, S/ {{amount}}',
@@ -155,7 +141,6 @@ export const translations = {
     'history.dayTotalLabel': 'Total del {{day}}: S/ {{amount}}',
     'history.emptyPastMonth': 'No hay gastos registrados este mes.',
 
-    // Presupuestos
     'budgets.loading': 'Cargando presupuestos',
     'budgets.intro': 'Ponle un límite mensual a cada categoría. El Resumen te avisa cuando te acercas o ya te pasaste. Déjalo vacío si no quieres límite en esa categoría.',
     'budgets.noLimit': 'sin límite',
@@ -167,7 +152,6 @@ export const translations = {
     'budgets.saveErrorMessage': 'No se pudo guardar el presupuesto',
     'budgets.clearErrorMessage': 'No se pudo quitar el presupuesto',
 
-    // Perfil
     'profile.name': 'Nombre',
     'profile.namePlaceholder': 'Tu nombre',
     'profile.saveName': 'Guardar nombre',
@@ -225,7 +209,6 @@ export const translations = {
     'profile.about': 'Sobre la app',
     'profile.email': 'Correo electrónico',
 
-    // Actualizaciones
     'update.checking': 'Buscando actualizaciones…',
     'update.upToDate': 'Ya tienes la última versión ({{version}})',
     'update.available': 'Hay una versión nueva: {{version}}',
@@ -241,12 +224,10 @@ export const translations = {
     'update.exitConfirmMessage': 'La descarga se cancela si sales ahora.',
     'update.exitConfirmConfirm': 'Salir',
 
-    // Sobre la app
     'about.tagline': 'Rumbo proyecta cuánto vas a terminar gastando el mes, desde tu primer gasto registrado.',
     'about.versionLabel': 'Versión {{version}}',
     'about.repository': 'Ver repositorio en GitHub',
 
-    // Guía de bienvenida
     'onboarding.step1Title': '¡Hola! Soy Sol 🪙',
     'onboarding.step1Body': 'Te voy a mostrar rápido cómo funciona Rumbo, en menos de un minuto.',
     'onboarding.step2Title': 'Registra gastos e ingresos',
@@ -262,7 +243,6 @@ export const translations = {
     'onboarding.skip': 'Saltar',
     'onboarding.start': 'Empezar',
 
-    // FAQ
     'faq.title': 'Preguntas frecuentes',
     'faq.q1': '¿Qué significa "a este ritmo, terminas el mes en X"?',
     'faq.a1': 'Es una proyección simple: lo gastado hasta hoy, dividido entre los días que llevas registrando, multiplicado por los días del mes. Se ajusta solo cada día que agregas datos.',
@@ -405,7 +385,6 @@ export const translations = {
     'add.restoreCategory': 'Restore {{name}}',
     'add.restoreCategoryErrorMessage': "Couldn't restore the category",
 
-    // Default categories
     'category.food': 'Food',
     'category.transport': 'Transport',
     'category.leisure': 'Leisure',

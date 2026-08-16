@@ -12,8 +12,6 @@ import Mascot from '../components/Mascot';
 const RELEASES_API = 'https://api.github.com/repos/Sekujk/rumbo/releases/latest';
 const RELEASES_PAGE = 'https://github.com/Sekujk/rumbo/releases/latest';
 
-// Compara versiones "1.2.3" (semver simple, sin librería): más que
-// suficiente para el esquema de versión de app.json.
 function isNewerVersion(remote, local) {
   const r = remote.replace(/^v/, '').split('.').map(Number);
   const l = local.split('.').map(Number);
@@ -33,8 +31,8 @@ export default function UpdateScreen({ onExit }) {
   const styles = useMemo(() => getStyles(colors), [colors]);
 
   const currentVersion = Constants.expoConfig?.version || '1.0.0';
-  const [status, setStatus] = useState('checking'); // checking | upToDate | available | downloading | error | downloadError
-  const [latest, setLatest] = useState(null); // { version, apkUrl }
+  const [status, setStatus] = useState('checking');
+  const [latest, setLatest] = useState(null);
   const [progress, setProgress] = useState(0);
 
   const cardOpacity = useRef(new Animated.Value(0)).current;
@@ -64,8 +62,6 @@ export default function UpdateScreen({ onExit }) {
     checkForUpdates();
   }, []);
 
-  // Fundido de entrada cada vez que cambia el estado principal (no
-  // mientras la barra de descarga se mueve dentro del mismo estado).
   useEffect(() => {
     if (status === 'downloading') return;
     cardOpacity.setValue(0);
@@ -80,10 +76,6 @@ export default function UpdateScreen({ onExit }) {
     Animated.timing(progressAnim, { toValue: progress, duration: 200, useNativeDriver: false }).start();
   }, [progress]);
 
-  // Salir de esta pantalla con el boton fisico de atras de Android
-  // no tenia ningun manejo propio (nada en la app lo intercepta), asi
-  // que por defecto cerraba la app entera en vez de volver a Perfil.
-  // Ademas, si hay una descarga en curso, se pierde si sales sin avisar.
   useEffect(() => {
     const onBackPress = () => {
       if (status === 'downloading') {
@@ -125,7 +117,7 @@ export default function UpdateScreen({ onExit }) {
       const contentUri = await FileSystem.getContentUriAsync(result.uri);
       await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
         data: contentUri,
-        flags: 1, // FLAG_GRANT_READ_URI_PERMISSION
+        flags: 1,
         type: 'application/vnd.android.package-archive',
       });
       setStatus('available');

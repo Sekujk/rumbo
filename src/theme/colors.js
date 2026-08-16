@@ -1,12 +1,3 @@
-// Paleta light/dark. Los nombres son semánticos (qué rol cumple el color,
-// no qué color es) para que el mismo JSX funcione en ambos modos sin
-// ramas condicionales por componente.
-
-// Paleta categórica: un color por categoría, asignado automático (ver
-// getCategoryColor más abajo): el usuario no elige nada, y así las
-// categorías se distinguen de un vistazo en vez de que todo sea
-// teal/gris. Separada de los colores semánticos (danger/warning/success)
-// para que un punto de categoría nunca se confunda con un estado.
 const lightCategoryPalette = ['#db2777', '#7c3aed', '#2563eb', '#0891b2', '#65a30d', '#ca8a04', '#ea580c', '#64748b'];
 const darkCategoryPalette = ['#f472b6', '#a78bfa', '#60a5fa', '#22d3ee', '#a3e635', '#facc15', '#fb923c', '#94a3b8'];
 
@@ -56,9 +47,6 @@ export const darkColors = {
   categoryPalette: darkCategoryPalette,
 };
 
-// Asignación determinística: la misma categoría siempre cae en el mismo
-// color (hash simple de su id/nombre), sin que el usuario tenga que
-// elegir ni que se guarde nada nuevo en la base de datos.
 export const getCategoryColor = (colors, key) => {
   if (!key) return colors.textFaint;
   let hash = 0;

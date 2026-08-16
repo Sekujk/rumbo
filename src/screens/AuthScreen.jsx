@@ -20,10 +20,6 @@ export default function AuthScreen() {
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(16)).current;
-  // Fundido corto cuando se alterna Ingresar/Registrarte, para que el
-  // cambio de "ventana" (mismo formulario, otro propósito) se sienta,
-  // no salte de golpe. No corre en el primer render: eso ya lo cubre
-  // fadeAnim/slideAnim de arriba.
   const subtitleAnim = useRef(new Animated.Value(1)).current;
   const isFirstRender = useRef(true);
 
@@ -55,8 +51,6 @@ export default function AuthScreen() {
         if (requiresEmailConfirmation) {
           notify({ title: t('auth.accountCreatedTitle'), message: t('auth.accountCreatedMessage'), variant: 'success' });
         }
-        // Si no requiere confirmación, la sesión ya quedó activa y
-        // AuthContext te lleva directo al dashboard sin alertas de más.
       } else {
         await signIn(email, password);
       }
@@ -173,8 +167,6 @@ const getStyles = (colors) => StyleSheet.create({
     marginTop: 8,
   },
   buttonText: { color: colors.background, fontSize: 16, fontWeight: '600' },
-  // padding vertical propio (no solo el texto) para que el área táctil
-  // del link llegue al mínimo de 44pt, no solo la línea de texto (~20px).
   switchButton: { paddingVertical: 14, marginTop: 8 },
   switchText: { textAlign: 'center', color: colors.primary, fontSize: 14 },
 });

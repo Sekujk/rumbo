@@ -22,10 +22,7 @@ export default function AboutScreen({ onReplayGuide }) {
         message: t('profile.shareMessage', { url: RELEASES_PAGE }),
         url: RELEASES_PAGE,
       });
-    } catch (error) {
-      // el usuario cerró el share sheet o no está disponible en esta
-      // plataforma; no hace falta avisar nada
-    }
+    } catch (error) {}
   };
 
   return (

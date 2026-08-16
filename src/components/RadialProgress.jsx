@@ -3,10 +3,6 @@ import { View, StyleSheet } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { useTheme } from '../theme/ThemeContext';
 
-// Anillo de progreso generico (mismo truco de stroke-dasharray/offset que
-// CategoryDonutChart, pero con un solo segmento): el contenido central se
-// pasa como children para que cada pantalla decida que numero/etiqueta
-// mostrar adentro.
 export default function RadialProgress({ progress, color, size = 150, strokeWidth = 14, children }) {
   const { colors } = useTheme();
   const radius = (size - strokeWidth) / 2;

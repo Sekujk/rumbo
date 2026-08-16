@@ -18,15 +18,8 @@ const REMINDER_NOTIFICATION_ID_KEY = 'rumbo:reminder-notification-id';
 const DEFAULT_HOUR = 20;
 const DEFAULT_MINUTE = 0;
 
-// Desde el SDK 53 de Expo, Expo Go ya no soporta expo-notifications (ni
-// siquiera notificaciones locales) — hace falta una build propia. Sin
-// este chequeo, cualquier llamada a Notifications.* revienta con un
-// error feo apenas alguien prueba la app en Expo Go.
 const isExpoGo = Constants.appOwnership === 'expo';
 
-// Se ejecuta una sola vez al importar el módulo (no en cada render):
-// define cómo se muestra una notificación mientras la app está abierta,
-// y crea el canal de Android que exige mostrar cualquier notificación ahí.
 if (!isExpoGo) {
   Notifications.setNotificationHandler({
     handleNotification: async () => ({

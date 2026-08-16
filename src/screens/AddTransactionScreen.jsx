@@ -24,7 +24,7 @@ export default function AddTransactionScreen() {
   const { notify, confirm } = useAppAlert();
   const styles = useMemo(() => getStyles(colors), [colors]);
 
-  const [type, setType] = useState('expense'); // 'expense' | 'income'
+  const [type, setType] = useState('expense');
   const [categories, setCategories] = useState([]);
   const [archivedCategories, setArchivedCategories] = useState([]);
   const [showArchived, setShowArchived] = useState(false);
@@ -38,8 +38,6 @@ export default function AddTransactionScreen() {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [savingCategory, setSavingCategory] = useState(false);
 
-  // Un Animated.Value por categoría, creado una sola vez (no en cada
-  // render) para el rebote al elegirla.
   const chipScales = useRef({}).current;
   const getChipScale = (id) => {
     if (!chipScales[id]) chipScales[id] = new Animated.Value(1);
@@ -109,10 +107,6 @@ export default function AddTransactionScreen() {
     setAddingCategory(true);
   };
 
-  // Archivar, no borrar: la categoria se queda en la base para que el
-  // historial, la proyeccion por categoria y el promedio de meses
-  // cerrados sigan siendo correctos para lo que ya pasó, solo deja de
-  // poder elegirse para gastos nuevos de aca en adelante.
   const handleArchiveCategory = async (category) => {
     const displayName = getCategoryDisplayName(t, category);
     const { count } = await supabase
@@ -447,8 +441,6 @@ const getStyles = (colors) => StyleSheet.create({
   amountRow: { flexDirection: 'row', alignItems: 'flex-end' },
   currencyPrefix: { fontSize: 24, fontWeight: '600', color: colors.textFaint, marginRight: 6, marginBottom: 10 },
   amountInput: { flex: 1, fontSize: 40, fontWeight: '700', paddingVertical: 8, color: colors.text },
-  // 48dp de alto mínimo (padding vertical 12) para cumplir el touch target
-  // de Android/iOS; antes medía ~33px con paddingVertical: 8.
   input: { borderWidth: 1, borderColor: colors.borderStrong, borderRadius: 8, padding: 12, fontSize: 16, minHeight: 48, color: colors.text, backgroundColor: colors.surface },
   categoryRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   categoryChip: {
