@@ -12,14 +12,36 @@ import Mascot from '../components/Mascot';
 const RELEASES_API = 'https://api.github.com/repos/Sekujk/rumbo/releases/latest';
 const RELEASES_PAGE = 'https://github.com/Sekujk/rumbo/releases/latest';
 
+const PRERELEASE_RANK = { alpha: 0, beta: 1 };
+
+function parseVersion(v) {
+  const clean = v.replace(/^v/, '');
+  const [core, preRaw] = clean.split('-');
+  const parts = core.split('.').map((n) => parseInt(n, 10) || 0);
+  let pre = null;
+  if (preRaw) {
+    const [tag, numStr] = preRaw.split('.');
+    pre = { tag, num: parseInt(numStr, 10) || 0 };
+  }
+  return { parts, pre };
+}
+
 function isNewerVersion(remote, local) {
-  const r = remote.replace(/^v/, '').split('.').map(Number);
-  const l = local.split('.').map(Number);
-  for (let i = 0; i < Math.max(r.length, l.length); i += 1) {
-    const rv = r[i] || 0;
-    const lv = l[i] || 0;
+  const r = parseVersion(remote);
+  const l = parseVersion(local);
+  for (let i = 0; i < Math.max(r.parts.length, l.parts.length); i += 1) {
+    const rv = r.parts[i] || 0;
+    const lv = l.parts[i] || 0;
     if (rv > lv) return true;
     if (rv < lv) return false;
+  }
+  if (!r.pre && l.pre) return true;
+  if (r.pre && !l.pre) return false;
+  if (r.pre && l.pre) {
+    const rRank = PRERELEASE_RANK[r.pre.tag] ?? 0;
+    const lRank = PRERELEASE_RANK[l.pre.tag] ?? 0;
+    if (rRank !== lRank) return rRank > lRank;
+    return r.pre.num > l.pre.num;
   }
   return false;
 }
