@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../theme/ThemeContext';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAppAlert } from '../context/AppAlertContext';
+import Mascot from '../components/Mascot';
 
 export default function AuthScreen() {
   const { signIn, signUp } = useAuth();
@@ -65,6 +66,11 @@ export default function AuthScreen() {
     <Animated.View
       style={[styles.container, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}
     >
+      <View style={styles.hero}>
+        <View style={styles.glow} />
+        <Mascot size={56} />
+      </View>
+
       <Text style={styles.title}>Rumbo</Text>
       <Animated.Text style={[styles.subtitle, { opacity: subtitleAnim }]}>
         {isSignUp ? t('auth.signUpSubtitle') : t('auth.signInSubtitle')}
@@ -133,7 +139,15 @@ export default function AuthScreen() {
 
 const getStyles = (colors) => StyleSheet.create({
   container: { flex: 1, justifyContent: 'center', padding: 24, backgroundColor: colors.background },
-  title: { fontSize: 32, fontWeight: '700', textAlign: 'center', marginBottom: 4, color: colors.text },
+  hero: { alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+  glow: {
+    position: 'absolute',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: colors.accentGoldSoft,
+  },
+  title: { fontSize: 36, fontWeight: '800', textAlign: 'center', marginBottom: 4, color: colors.primary, letterSpacing: -0.5 },
   subtitle: { fontSize: 15, color: colors.textMuted, textAlign: 'center', marginBottom: 32 },
   input: {
     borderWidth: 1,
@@ -158,7 +172,7 @@ const getStyles = (colors) => StyleSheet.create({
     justifyContent: 'center',
   },
   button: {
-    backgroundColor: colors.text,
+    backgroundColor: colors.primary,
     borderRadius: 8,
     padding: 14,
     minHeight: 52,
