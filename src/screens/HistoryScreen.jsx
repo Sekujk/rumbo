@@ -13,13 +13,14 @@ import { getCategoryDisplayName } from '../config/defaultCategories';
 import Mascot from '../components/Mascot';
 import MonthSelector from '../components/MonthSelector';
 import { useEarliestExpenseMonth } from '../hooks/useEarliestExpenseMonth';
+import { toLocalDateString } from '../utils/date';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-const todayStr = () => new Date().toISOString().slice(0, 10);
-const yesterdayStr = () => new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+const todayStr = () => toLocalDateString();
+const yesterdayStr = () => toLocalDateString(new Date(Date.now() - 86400000));
 
 export default function HistoryScreen() {
   const { colors } = useTheme();
@@ -45,10 +46,10 @@ export default function HistoryScreen() {
   }, [selectedMonth]);
 
   const load = useCallback(async () => {
-    const monthStartStr = selectedMonth.toISOString().slice(0, 10);
+    const monthStartStr = toLocalDateString(selectedMonth);
     const nextMonth = new Date(selectedMonth);
     nextMonth.setMonth(nextMonth.getMonth() + 1);
-    const nextMonthStr = nextMonth.toISOString().slice(0, 10);
+    const nextMonthStr = toLocalDateString(nextMonth);
 
     const { data, error } = await supabase
       .from('transactions')

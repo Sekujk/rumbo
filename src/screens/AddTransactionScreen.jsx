@@ -11,6 +11,7 @@ import { useLanguage } from '../i18n/LanguageContext';
 import { useAppAlert } from '../context/AppAlertContext';
 import { getCategoryColor } from '../theme/colors';
 import { MAX_CATEGORIES, getCategoryDisplayName } from '../config/defaultCategories';
+import { toLocalDateString } from '../utils/date';
 import Mascot from '../components/Mascot';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -176,7 +177,7 @@ export default function AddTransactionScreen() {
     }
     setSaving(true);
     try {
-      const occurred_on = new Date().toISOString().slice(0, 10);
+      const occurred_on = toLocalDateString();
       const { error } =
         type === 'expense'
           ? await supabase.from('transactions').insert({

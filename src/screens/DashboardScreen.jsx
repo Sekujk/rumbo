@@ -11,6 +11,7 @@ import MonthSelector from '../components/MonthSelector';
 import CategoryDonutChart from '../components/CategoryDonutChart';
 import RadialProgress from '../components/RadialProgress';
 import { useEarliestExpenseMonth } from '../hooks/useEarliestExpenseMonth';
+import { toLocalDateString } from '../utils/date';
 
 export default function DashboardScreen() {
   const { colors } = useTheme();
@@ -47,6 +48,7 @@ export default function DashboardScreen() {
   const hasAnimatedCards = useRef(false);
 
   const loadCurrentMonth = useCallback(async () => {
+    const today = toLocalDateString();
     const [
       { data: proj, error: projErr },
       { data: inc, error: incErr },
@@ -55,12 +57,12 @@ export default function DashboardScreen() {
       { data: budgets, error: budgetsErr },
       { data: histAvg, error: histErr },
     ] = await Promise.all([
-      supabase.from('monthly_projection').select('*').maybeSingle(),
-      supabase.from('monthly_income').select('*').maybeSingle(),
-      supabase.from('category_monthly_projection').select('*'),
+      supabase.rpc('monthly_projection', { p_today: today }).maybeSingle(),
+      supabase.rpc('monthly_income', { p_today: today }).maybeSingle(),
+      supabase.rpc('category_monthly_projection', { p_today: today }),
       supabase.from('categories').select('id, name, default_key').order('name'),
       supabase.from('budgets').select('category_id, monthly_limit'),
-      supabase.from('category_historical_average').select('*'),
+      supabase.rpc('category_historical_average', { p_today: today }),
     ]);
 
     if (!projErr) setProjection(proj);
@@ -99,10 +101,10 @@ export default function DashboardScreen() {
   }, [t]);
 
   const loadPastMonth = useCallback(async () => {
-    const monthStartStr = selectedMonth.toISOString().slice(0, 10);
+    const monthStartStr = toLocalDateString(selectedMonth);
     const nextMonth = new Date(selectedMonth);
     nextMonth.setMonth(nextMonth.getMonth() + 1);
-    const nextMonthStr = nextMonth.toISOString().slice(0, 10);
+    const nextMonthStr = toLocalDateString(nextMonth);
 
     const [
       { data: txs, error: txErr },
