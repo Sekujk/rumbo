@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Switch, Platform 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import Constants from 'expo-constants';
 import { useTheme } from '../theme/ThemeContext';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAppAlert } from '../context/AppAlertContext';
@@ -17,24 +18,32 @@ const REMINDER_NOTIFICATION_ID_KEY = 'rumbo:reminder-notification-id';
 const DEFAULT_HOUR = 20;
 const DEFAULT_MINUTE = 0;
 
+// Desde el SDK 53 de Expo, Expo Go ya no soporta expo-notifications (ni
+// siquiera notificaciones locales) — hace falta una build propia. Sin
+// este chequeo, cualquier llamada a Notifications.* revienta con un
+// error feo apenas alguien prueba la app en Expo Go.
+const isExpoGo = Constants.appOwnership === 'expo';
+
 // Se ejecuta una sola vez al importar el módulo (no en cada render):
 // define cómo se muestra una notificación mientras la app está abierta,
 // y crea el canal de Android que exige mostrar cualquier notificación ahí.
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
-
-if (Platform.OS === 'android') {
-  Notifications.setNotificationChannelAsync('daily-reminder', {
-    name: 'Recordatorio diario',
-    importance: Notifications.AndroidImportance.DEFAULT,
+if (!isExpoGo) {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
   });
+
+  if (Platform.OS === 'android') {
+    Notifications.setNotificationChannelAsync('daily-reminder', {
+      name: 'Recordatorio diario',
+      importance: Notifications.AndroidImportance.DEFAULT,
+    });
+  }
 }
 
 export default function SettingsScreen() {
@@ -101,6 +110,14 @@ export default function SettingsScreen() {
   };
 
   const handleToggleReminder = async (value) => {
+    if (isExpoGo) {
+      notify({
+        title: t('profile.expoGoTitle'),
+        message: t('profile.expoGoMessage'),
+        variant: 'info',
+      });
+      return;
+    }
     if (value) {
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
       let finalStatus = existingStatus;
