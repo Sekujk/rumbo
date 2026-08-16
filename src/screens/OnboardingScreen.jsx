@@ -4,7 +4,7 @@ import Mascot from '../components/Mascot';
 import { useTheme } from '../theme/ThemeContext';
 import { useLanguage } from '../i18n/LanguageContext';
 
-const STEPS = ['step1', 'step2', 'step3', 'step4', 'step5'];
+const STEPS = ['step1', 'step2', 'step3', 'step4', 'step5', 'step6', 'step7'];
 
 export default function OnboardingScreen({ onFinish }) {
   const { colors } = useTheme();
