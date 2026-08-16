@@ -312,10 +312,7 @@ export default function DashboardScreen() {
                       : t('dashboard.lowConfidenceMany', { days: daysTracked })}
                   </Text>
                 ) : (
-                  <Text style={styles.projectionHint}>
-                    {t('dashboard.hint')}
-                    {hasRange ? t('dashboard.hintRange') : ''}
-                  </Text>
+                  <Text style={styles.projectionHint}>{t('dashboard.hint')}</Text>
                 )}
               </View>
 
