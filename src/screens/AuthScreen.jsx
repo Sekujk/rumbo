@@ -1,11 +1,18 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Animated } from 'react-native';
+import {
+  View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Animated,
+  LayoutAnimation, Platform, UIManager,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../theme/ThemeContext';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAppAlert } from '../context/AppAlertContext';
 import Mascot from '../components/Mascot';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 export default function AuthScreen() {
   const { signIn, signUp } = useAuth();
@@ -21,8 +28,6 @@ export default function AuthScreen() {
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(16)).current;
-  const subtitleAnim = useRef(new Animated.Value(1)).current;
-  const isFirstRender = useRef(true);
 
   useEffect(() => {
     Animated.parallel([
@@ -31,14 +36,10 @@ export default function AuthScreen() {
     ]).start();
   }, []);
 
-  useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
-    subtitleAnim.setValue(0);
-    Animated.timing(subtitleAnim, { toValue: 1, duration: 220, useNativeDriver: true }).start();
-  }, [isSignUp]);
+  const handleToggleMode = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setIsSignUp((prev) => !prev);
+  };
 
   const handleSubmit = async () => {
     if (!email || !password) {
@@ -72,9 +73,9 @@ export default function AuthScreen() {
       </View>
 
       <Text style={styles.title}>Rumbo</Text>
-      <Animated.Text style={[styles.subtitle, { opacity: subtitleAnim }]}>
+      <Text style={styles.subtitle}>
         {isSignUp ? t('auth.signUpSubtitle') : t('auth.signInSubtitle')}
-      </Animated.Text>
+      </Text>
 
       <TextInput
         style={styles.input}
@@ -124,7 +125,7 @@ export default function AuthScreen() {
       </TouchableOpacity>
 
       <TouchableOpacity
-        onPress={() => setIsSignUp(!isSignUp)}
+        onPress={handleToggleMode}
         style={styles.switchButton}
         accessibilityRole="button"
         accessibilityLabel={isSignUp ? t('auth.switchToSignInLabel') : t('auth.switchToSignUpLabel')}
